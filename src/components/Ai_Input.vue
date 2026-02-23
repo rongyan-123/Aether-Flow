@@ -17,6 +17,13 @@ import { ref } from "vue";
 const Chat = useChatHistoryStore();
 const userInput = ref("");
 async function sendHistory() {
+  //非空检查
+  const check = userInput.value.trim();
+  if (!check) {
+    alert("输入不能为空");
+    return;
+  }
+
   //先把当前用户输入的字符串,上传到历史记录,而且要渲染出当前对话,再统一发送给ai
   //先上传到历史记录
   Chat.useradd(userInput.value); //必须先在上面创建实例后,才能调用里面的方法
