@@ -2,8 +2,8 @@
   <!-- ✅ 新增：加 .chat-container 外层，让 flex 布局生效 -->
   <div class="chat-container">
     <h1>ai聊天</h1>
-    <!-- 聊天消息区域（可滚动） -->
-    <div class="talk">
+    <!-- 聊天消息区域（可滚动）,必须用ref绑定,不能用v-model,否则无法获取DOM元素 -->
+    <div class="talk" ref="tobottom">
       <div class="message-item" v-for="item in history.data" :key="item.id">
         <!-- 用户消息：靠右 -->
         <div v-if="item.role === 'user'" class="message user">
@@ -26,6 +26,35 @@
 <script setup>
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
 import { marked } from "marked";
+import { ref, watch, nextTick, onMounted, onActivated } from "vue";
+const tobottom = ref(null);
+const history = useChatHistoryStore(); //历史记录实例
+//封装自动滚动函数
+const scrollToBottom = () => {
+  nextTick(() => {
+    //nextTick会等待渲染完成再进行获取
+    if (tobottom.value) {
+      tobottom.value.scrollTop = tobottom.value.scrollHeight;
+    }
+  });
+};
+
+//对话自动滚动到底部
+watch(
+  () => history.data,
+  () => {
+    scrollToBottom();
+  },
+  { deep: true },
+);
+
+//切换回聊天界面自动滚动到底部
+onMounted(() => {
+  scrollToBottom();
+});
+onActivated(() => {
+  scrollToBottom();
+});
 
 // 封装 Markdown 解析函数
 const parseMarkdown = (content) => {
@@ -33,8 +62,6 @@ const parseMarkdown = (content) => {
   // ✅ 可选优化：开启 GFM 兼容，解析更全的 Markdown 语法
   return marked.parse(content, { gfm: true });
 };
-
-const history = useChatHistoryStore();
 </script>
 
 <style>
@@ -68,7 +95,6 @@ h1 {
 /* 3. 消息区域：占满剩余空间，可滚动 */
 .talk {
   flex: 1;
-  overflow-y: auto;
   padding: 20px;
 }
 
