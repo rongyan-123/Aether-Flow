@@ -95,7 +95,8 @@ h1 {
 /* 3. 消息区域：占满剩余空间，可滚动 */
 .talk {
   flex: 1;
-  padding: 20px;
+  padding: 30px 25px; /* ✅ 加大内边距，左右25px，上下30px */
+  overflow-y: auto; /* ✅ 明确开启垂直滚动，防止内容溢出 */
 }
 
 /* 4. 单条消息容器 */
@@ -107,13 +108,14 @@ h1 {
 
 /* 5. 消息气泡通用样式（✅ 删除重复定义，只保留一个） */
 .message {
-  display: block; /* ✅ 改：用 block 适配 Markdown 块级元素 */
-  padding: 10px 15px;
-  border-radius: 10px;
-  max-width: 70%;
+  display: block;
+  padding: 15px 25px; /* ✅ 内边距从10px15px→14px20px，气泡内部更松 */
+  border-radius: 12px; /* ✅ 圆角稍大，视觉更柔和 */
+  max-width: 88%; /* ✅ 从80%→88%，气泡更宽，文字少换行 */
   font-size: 16px;
-  line-height: 1.8; /* ✅ 增大行高，适配 Markdown */
+  line-height: 2; /* ✅ 行高从1.8→2，文字行间距更大 */
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* ✅ 加轻微阴影，气泡更立体，不挤 */
 }
 
 /* 7. 用户消息：靠右，蓝色背景 */
