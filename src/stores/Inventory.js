@@ -9,6 +9,22 @@ export const useInventoryStore = defineStore("inventory", {
     ],
   }),
   actions: {
-    add() {},
+    add(obj) {
+      //使用遍历,来做到同类物品堆叠
+      for (const item of this.data) {
+        //如果发现同名,就直接把数量加在一起,然后返回就行
+        if (obj.name === item.name) {
+          item.mount += obj.mount;
+          return;
+        }
+      }
+      //遍历完没有发现同名,再直接推入一个新的
+      this.data.push({
+        id: Date.now(),
+        name: obj.name,
+        value: obj.value,
+        mount: obj.mount,
+      });
+    },
   },
 });
