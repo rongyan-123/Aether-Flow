@@ -26,7 +26,7 @@ async function sendHistory() {
 
   //先把当前用户输入的字符串,上传到历史记录,而且要渲染出当前对话,再统一发送给ai
   //先上传到历史记录
-  Chat.useradd(userInput.value); //必须先在上面创建实例后,才能调用里面的方法
+  Chat.useradd(userInput.value); //必须先在上面创建实例后,才能调用历史记录的pinia仓库里的方法
 
   //渲染对话在另一个界面进行,原理是只渲染历史记录就行,这里要做的就是往历史记录里面加东西,他会自动渲染的
 
@@ -36,7 +36,7 @@ async function sendHistory() {
   //用 await 等待 chatWithAI 执行完成，拿到真正的 AI 回复字符串
   const aiReply = await chatWithAI();
 
-  //调用ai,开始读取历史记录,并输出对应回复
+  //将对应ai回复输送到历史记录中,为下次回答做准备
   Chat.assistantadd(aiReply);
 }
 </script>
