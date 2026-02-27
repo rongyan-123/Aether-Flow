@@ -1,5 +1,9 @@
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
+import { queryItemName } from "@/StaticData/ItemData";
+import { queryWorldName } from "@/StaticData/WorldData";
 import { useInventoryStore } from "@/stores/Inventory";
+import { usePlayerStore } from "@/stores/player";
+import { tools } from "@/utils/aitools";
 //chatGPT地址
 // 原 API 地址
 const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
@@ -10,106 +14,18 @@ const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 
 const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 //=========================== ai提示词 ==========================
-const prompt = `你是修仙世界的AI助手玄机子,请严格根据我给你的数据回复，回复格式要古风修仙，比如称呼为道友,等等,请你自行判断和选取,但是不要文言文,通俗易懂即可'
+const prompt = `你是修仙世界的AI助手,请严格根据我给你的数据回复，回复格式要古风修仙，比如称呼为道友,等等,请你自行判断和选取,但是不要文言文,通俗易懂即可,而且要模板化,但是绝对不要丢代码在content里面'
 核心规则：
-1. 你可以直接读取用户的背包数据，绝对不能说无法访问/无法读取用户数据；
-2. 绝对不能编造背包里不存在的物品，所有回复必须严格基于背包数据；
+1. 你可以直接读取用户的背包,个人面板数据，绝对不能说无法访问/无法读取用户数据；
+2. 绝对不能编造背包和面板里不存在的信息，所有回复必须严格基于用户所有数据；
 3. 【强制规则】无论用户提到获得/使用多少个物品，**必须且只能调用一次对应工具**，把所有物品都放在同一个items数组里，绝对不能拆分成多个工具调用；
 4. 物品的value和mount参数如果用户没指定，你可以自行设定合理的正整数。
+5. 处理用户请求时，**先返回自然语言回答（比如解释物品/回应需求），再调用对应的工具执行操作**；
 
-我已经把用户的背包数据放在了下方，
+我已经把用户的数据放在了下方，
 用户背包数据：{{backpack_DATA}}
+用户个人面板数据:{{PlayerStats_DATA}}
           `;
-
-//======================== ai调用工具 ============================
-const tools = [
-  {
-    //添加物品
-    type: "function",
-    function: {
-      name: "Backpack_additems",
-      description:
-        "【只能调用一次】这是一个向背包中添加物品的工具(可批量添加),当用户获得(包括且不限于捡到,抢到,击杀获得等等)物品时,在背包数据中添加物品,绝对不能拆分成多次调用",
-      parameters: {
-        type: "object",
-        required: ["items"], // 必填：必须传入物品数组
-        properties: {
-          // ==============================================
-          // 第一层：表示这个工具需要传递的参数是一个数组
-          // ==============================================
-          items: {
-            type: "array",
-            description: "要添加的物品列表,必须包含所有物品,不得遗漏",
-            // ==============================================
-            // 第二层：数组里面的每一个值,都是一个对象,每一个对象包含三个属性
-            // ==============================================
-            items: {
-              type: "object",
-              required: ["name", "value", "mount"], // 单个物品的必填字段
-              properties: {
-                name: {
-                  type: "string",
-                  description: "物品的具体名字,必须是中文",
-                },
-                value: {
-                  type: "number",
-                  description: "单个此物品的具体价值,只能是正整数",
-                  minimum: 1, //注意是minimum,别写错了
-                },
-                mount: {
-                  type: "number",
-                  description: "所有此物品的具体数量,只能是正整数",
-                  minimum: 1,
-                },
-              },
-            },
-          },
-        },
-      }, //parameters括号
-    },
-  },
-  {
-    //删除物品
-    type: "function",
-    function: {
-      name: "Backpack_reduceitems",
-      description:
-        "【只能调用一次】这是一个减少背包中物品的工具(可批量减少),当用户使用(包括且不限于使用,丢弃,贩卖等等)物品时,在背包数据中减少物品,绝对不能拆分成多次调用",
-      parameters: {
-        type: "object",
-        required: ["items"],
-        properties: {
-          items: {
-            type: "array",
-            description: "要减少的物品列表,必须包含所有物品,不得遗漏",
-            items: {
-              type: "object",
-              required: ["name", "value", "mount"],
-              properties: {
-                name: {
-                  type: "string",
-                  description: "物品的具体名字,必须是中文",
-                },
-                value: {
-                  type: "number",
-                  description: "单个此物品的具体价值,只能是正整数",
-                  minimum: 1, //注意是minimum,别写错了
-                },
-                mount: {
-                  type: "number",
-                  description: "所有此物品的具体数量,只能是正整数",
-                  minimum: 1,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-
-  //{}
-];
 
 // ==================== 核心请求函数 ====================
 //该函数拿到的是ai回复,类型是字符串
@@ -122,18 +38,25 @@ export async function chatWithAI() {
   );
   const history = useChatHistoryStore(); //创建历史记录实例
   const backpack = useInventoryStore(); //创建背包实例
-
+  const Player = usePlayerStore(); //创建用户个人面板实例
   const realbackpackdata = JSON.stringify(backpack.data, null, 2); //转化背包内数据为字符串
+  const realPlayerdata = JSON.stringify(Player.$state, null, 2); //转化面板内数据为字符串,请注意,面板仓库里没有data,全是散的,放在state里面
 
-  //每次发送请求都会更新一次背包(原理是每次都用replace替换prompt里面的数据),供ai同步读取
+  //每次发送请求都会更新一次(原理是每次都用replace替换prompt里面的数据),供ai同步读取
   const finalSystemPrompt = prompt.replace("backpack_DATA", realbackpackdata);
+  const finalSystemPrompt2 = finalSystemPrompt.replace(
+    "PlayerStats_DATA",
+    realPlayerdata,
+  );
+  console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
+  console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
 
   //创建最终的message
   const messages = [
     {
       id: 1,
       role: "system",
-      content: finalSystemPrompt,
+      content: finalSystemPrompt2,
     },
     ...history.data,
   ];
@@ -186,8 +109,17 @@ export async function chatWithAI() {
     const AiReply = data.choices[0].message; //拿到回复中的有效内容
 
     //获取深度思考
-    const deepthink = AiReply.reasoning_content || "";
+    //const deepthink = AiReply.reasoning_content || "";
 
+    //把回复放到message里面,确保回复准确
+    messages.push({
+      id: Date.now(),
+      role: "assistant",
+      content: AiReply.content,
+    });
+    console.log("ai第一次回复:", AiReply.content);
+
+    console.log("3️⃣ 检查是否有 tool_calls：", AiReply.tool_calls);
     // // 收集所有工具的执行结果,放在全局中使用
     const toolResult = [];
     //====================== 解析工具 ==============================================
@@ -242,32 +174,93 @@ export async function chatWithAI() {
           toolResult.push(`已使用物品:\n${returncontent2}`);
           console.log(`成功使用${count}件物品!`);
         }
+
+        //查询
+        if (toolname === "Query_Data") {
+          console.log("ai调用查询,查找:", toolArg.queryName);
+
+          //如果查询的是物品
+          if (toolArg.queryType === "ItemData") {
+            // queryItemName(toolArg.queryName);
+            toolResult.push(
+              `查询工具使用结果:${queryItemName(toolArg.queryName)}`,
+            );
+            console.log(
+              "进入物品查询,结果如下:",
+              queryItemName(toolArg.queryName),
+            );
+          }
+          //如果查询的是设定
+          if (toolArg.queryType === "ItemWorld") {
+            toolResult.push(
+              `查询工具使用结果:${queryWorldName(toolArg.queryName)}`,
+            );
+            console.log(
+              "进入设定查询,结果如下:",
+              queryWorldName(toolArg.queryName),
+            );
+          }
+          console.log("查询结束");
+        }
       }
       console.log("一共使用工具次数:", count);
       console.log("toolResult==", toolResult);
     }
+    //把工具回复放到message里面,准备再次发送给ai
+    const toolResultStr = toolResult.join("\n\n");
+    messages.push({
+      id: Date.now(),
+      role: "assistant",
+      content: `【工具执行结果】\n${toolResultStr}`, //须转化为字符串,否则无法读取
+    });
 
     if (data.choices && data.choices.length > 0) {
       //防御性编程
-      const AiReply_content = AiReply.content; //拿到具体的文本内容
+      console.log("🔵 第二次 API 调用：把工具结果发回给 AI...");
+      // const AiReply_content = AiReply.content; //拿到具体的文本内容
+      // const toolResulter = toolResult.join("\n\n");
+      // console.log("ai回复:", AiReply_content);
+      // if (toolResulter && !AiReply_content) {
+      //   //使用了工具,但没回复
+      //   return `\n${toolResulter}`;
+      // }
+      // if (toolResulter && AiReply_content) {
+      //   //使用了工具,且有回复
+      //   console.log("ai既有工具,又有回复");
+      //   return `\n${AiReply_content}\n${toolResulter}`;
+      // }
+      // if (deepthink) {
+      //   return `【玄机子推演中...】\n${deepthink}\n\n【推演结果】\n${AiReply_content}\n${toolResulter}`;
+      // }
+      // return AiReply_content; //将其返回给其他使用该函数的组件
 
-      const toolResulter = toolResult.join("\n\n");
-      console.log("ai回复:", AiReply_content);
-      if (toolResulter && !AiReply_content) {
-        //使用了工具,但没回复
-        return `\n${toolResulter}`;
+      //2.0,多轮工具对话
+      const Aiconfiguration = {
+        //配置对象
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          //这里还是不建议用deepseek-r1 ,它不会fc,回答会丢一堆代码
+          model: "gpt-3.5-turbo",
+          messages: messages, //发送以下数据:历史记录,背包,ai第一次回复,工具回复,ai第二次回复
+          temperature: 0.7,
+          //stream: true, //开启流式输出
+        }),
+      };
+      //第二次发送给ai
+      const response = await fetch(API_URL, Aiconfiguration); //发送并收到回复
+      const data = await response.json(); //转为json格式
+      //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
+      if (!response.ok) {
+        console.error("API 授权失败/请求错误：", data.error);
+        return "抱歉，API 请求失败（请换个模型）";
       }
-      if (toolResulter && AiReply_content) {
-        //使用了工具,且有回复
-        console.log("ai既有工具,又有回复");
-
-        return `\n${AiReply_content}\n${toolResulter}`;
-      }
-      if (deepthink) {
-        return `【玄机子推演中...】\n${deepthink}\n\n【推演结果】\n${AiReply_content}\n${toolResulter}`;
-      }
-
-      return AiReply_content; //将其返回给其他使用该函数的组件
+      const AiReply = data.choices[0].message; //拿到回复中的有效内容
+      console.log("ai最终回复:", AiReply.content);
+      return AiReply.content;
     } else {
       console.error("响应异常", data);
       return "抱歉,ai出错";

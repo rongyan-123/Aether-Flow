@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>属性</h1>
+    <h1>角色面板</h1>
     <div>{{ PlayerStore.name }}</div>
   </div>
 </template>

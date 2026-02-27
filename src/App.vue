@@ -6,7 +6,7 @@
 
       <p class="item"><router-link to="/backpack">背包</router-link></p>
 
-      <p class="item"><router-link to="/shuxing">属性</router-link></p>
+      <p class="item"><router-link to="/shuxing">个人面板</router-link></p>
     </div>
 
     <div class="right">
@@ -15,10 +15,31 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "App",
-};
+<script setup>
+// import { onMounted } from "vue";
+// import { usePlayerStore } from "./stores/player";
+// const mian = usePlayerStore();
+// const prompt = `你是修仙世界的AI助手玄机子,请严格根据我给你的数据回复，回复格式要古风修仙，比如称呼为道友,等等,请你自行判断和选取,但是不要文言文,通俗易懂即可'
+// 核心规则：
+// 1. 你可以直接读取用户的背包,个人面板数据，绝对不能说无法访问/无法读取用户数据；
+// 2. 绝对不能编造背包和面板里不存在的信息，所有回复必须严格基于用户所有数据；
+// 3. 【强制规则】无论用户提到获得/使用多少个物品，**必须且只能调用一次对应工具**，把所有物品都放在同一个items数组里，绝对不能拆分成多个工具调用；
+// 4. 物品的value和mount参数如果用户没指定，你可以自行设定合理的正整数。
+// 5. 处理用户请求时，**先返回自然语言回答（比如解释物品/回应需求），再调用对应的工具执行操作**；
+
+// 我已经把用户的数据放在了下方，
+// 用户背包数据：{{backpack_DATA}}
+// 用户个人面板数据:{{PlayerStats_DATA}}
+//           `;
+
+// const realPlayerdata = JSON.stringify(mian.$state, null, 2); //转化面板内数据为字符串,请注意,面板仓库里没有data,全是散的,放在state里面
+
+// //每次发送请求都会更新一次(原理是每次都用replace替换prompt里面的数据),供ai同步读取
+// const finalSystemPrompt2 = prompt.replace("PlayerStats_DATA", realPlayerdata);
+// onMounted(() => {
+//   console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
+//   console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
+// });
 </script>
 
 <style>

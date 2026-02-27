@@ -11,7 +11,7 @@ const routes = [
   },
   {
     path: "/shuxing",
-    component: () => import("@/pages/PMMO.vue"),
+    component: () => import("@/pages/PlayerStats.vue"),
   },
 ];
 
