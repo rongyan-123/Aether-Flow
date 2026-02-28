@@ -1,14 +1,12 @@
 <template>
+  <!-- ✅ 模板结构完全保持不变！ -->
   <div class="app-container">
     <div class="left">
       <h3>AI修仙</h3>
       <p class="item"><router-link to="/">修仙</router-link></p>
-
       <p class="item"><router-link to="/backpack">背包</router-link></p>
-
       <p class="item"><router-link to="/shuxing">个人面板</router-link></p>
     </div>
-
     <div class="right">
       <router-view></router-view>
     </div>
@@ -16,6 +14,7 @@
 </template>
 
 <script setup>
+// ✅ 所有脚本逻辑（包括注释掉的）完全保持不变！
 // import { onMounted } from "vue";
 // import { usePlayerStore } from "./stores/player";
 // const mian = usePlayerStore();
@@ -42,62 +41,95 @@
 // });
 </script>
 
-<style>
+<style scoped>
+/* 全局重置 */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* 2. 最外层容器：使用 Flex 布局，占满整个视口高度 */
+/* 1. 最外层容器：和之前风格统一的柔和背景 */
 .app-container {
   display: flex;
   height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
 }
 
-/* 3. 左侧侧边栏：固定宽度，深色背景，内边距 */
+/* 2. 左侧侧边栏：优化配色、阴影、过渡动画 */
 .left {
-  width: 220px; /* 侧边栏宽度，你可以自己调 */
-  background-color: #eaeaea;
-  color: rgb(0, 0, 0);
-  padding: 20px; /* 内边距 */
+  width: 220px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  color: #2c3e50;
+  padding: 25px 20px;
   display: flex;
-  flex-direction: column; /* 让里面的链接竖着排 */
-  gap: 15px; /* 链接之间的间距 */
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.05);
+  border-right: 1px solid #e8e8e8;
 }
 
-/* 侧边栏标题样式 */
+/* 侧边栏标题：优化样式 */
 .left h3 {
-  margin-bottom: 20px;
-  font-size: 20px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
+  margin: 0 0 25px 0;
+  font-size: 21px;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 12px;
+  text-align: center;
 }
+
+/* 链接容器 */
 .item {
   margin: 0;
-  margin-bottom: 10px; /* 链接之间的间距 */
-}
-.item a {
-  display: block; /* 让它占满整行，宽度 100% */
-  padding: 10px 15px; /* 增加内边距，让点击区域变大 */
-  color: #131111;
-  text-decoration: none;
-  border-radius: 6px;
-}
-/* 鼠标悬停在链接上的样式 */
-.item a:hover,
-/* 链接被激活（当前页面）时的样式 */
-.item a.router-link-active {
-  width: 300px;
-  background-color: #42b883; /* Vue 绿，或者你喜欢的颜色 */
-  color: white;
 }
 
-/* 4. 右侧内容区：占满剩下的所有空间，内边距，内容多了可以滚动 */
+/* 链接样式：更柔和，加过渡动画 */
+.item a {
+  display: block;
+  padding: 12px 18px;
+  color: #34495e;
+  text-decoration: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* 鼠标悬停 & 激活状态：和之前统一的渐变紫色 */
+.item a:hover,
+.item a.router-link-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: translateX(3px);
+}
+
+/* 3. 右侧内容区：和之前风格统一的背景，去掉多余内边距（让子页面自己控制） */
 .right {
-  flex: 1; /* 核心：占满 flex 容器剩下的所有空间 */
-  padding: 30px; /* 内容区的内边距 */
-  background-color: #f5f5f5; /* 浅灰色背景，和侧边栏区分开 */
-  overflow-y: auto; /* 如果内容太多，右边可以单独滚动 */
+  flex: 1;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  overflow-y: auto;
+  /* 优化滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.right::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.right::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.right::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
 }
 </style>

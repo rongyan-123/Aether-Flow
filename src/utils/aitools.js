@@ -87,7 +87,7 @@ export const tools = [
 
   //{}
   //ai搜索设定数据库
-  //流程,ai提取用户想问的内容,先分是查物品,还是查世界观,然后再返回对应的名字
+  //流程,ai提取用户想问的内容,直接返回对应的名字
   {
     type: "function",
     function: {
@@ -96,16 +96,11 @@ export const tools = [
         "查询世界观,设定,功法,物品,法宝,丹药等等各种数据的工具,检测到用户询问:什么,啥,有什么用,介绍等等关键词时,使用当前工具给用户解惑,可多次使用",
       parameters: {
         type: "object",
-        required: ["queryType", "queryName"],
+        required: ["queryName"],
         properties: {
-          queryType: {
-            type: "string",
-            enum: ["ItemData", "WorldData"],
-            description: "查询类型：item（查物品）、world（查世界观）",
-          },
           queryName: {
             type: "string",
-            description: "根据用户想要问的东西,获取对应的名字",
+            description: `当进行查找时,请必须将句子拆分,拆成多个词语和关键字进行查找,比如用户询问"结丹是多少修为",那么就提取"结丹"和"修为"等关键字,进行查找,绝对不能直接使用工具查询一整句话,绝对不能加入标点符号`,
           },
         },
       },
@@ -113,4 +108,5 @@ export const tools = [
   },
 
   //{}
+  //ai修改个人面板
 ];

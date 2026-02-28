@@ -34,7 +34,7 @@ async function sendHistory() {
   userInput.value = "";
 
   //用 await 等待 chatWithAI 执行完成，拿到真正的 AI 回复字符串
-  const aiReply = await chatWithAI();
+  const aiReply = await chatWithAI(userInput);
 
   //将对应ai回复输送到历史记录中,为下次回答做准备
   Chat.assistantadd(aiReply);
