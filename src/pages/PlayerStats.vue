@@ -97,7 +97,7 @@
 
     <!-- 4. 功法 -->
     <div class="info-card">
-      <h2 class="card-title">功法</h2>
+      <h2 class="card-title">核心功法</h2>
       <div class="core-technique">
         <div class="core-label">核心修炼法门</div>
         <div class="core-value highlight">
@@ -108,7 +108,7 @@
         </div>
       </div>
       <div class="technique-list">
-        <div class="list-label">修炼功法</div>
+        <div class="list-label">可选修炼功法</div>
         <ul>
           <li
             v-for="(tech, index) in PlayerStore.cultivation_technique"

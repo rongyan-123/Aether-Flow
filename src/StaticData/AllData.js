@@ -154,8 +154,12 @@ export const alldata = [
   },
 ];
 export function queryName(name) {
-  console.log("=== queryName 被调用了！传入的 name：", name);
+  console.log("=== 进入查询函数！要查询的name：", name);
   const result = [];
+  if (!name || typeof name !== "string") {
+    console.log("⚠️ queryName 接收到无效参数：", name);
+    return "抱歉，查询关键字无效，请重新尝试";
+  }
   const Name = name.trim();
   //进入for循环遍历所有项,查找对应名字
   for (const index of alldata) {

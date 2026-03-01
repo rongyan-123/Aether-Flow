@@ -96,13 +96,32 @@ export const tools = [
         "查询世界观,设定,功法,物品,法宝,丹药等等各种数据的工具,检测到用户询问:什么,啥,有什么用,介绍等等关键词时,使用当前工具给用户解惑,如果要查询多个词语,请务必多次使用,而非单次",
       parameters: {
         type: "object",
-        required: ["queryName"],
+        required: ["name"],
         properties: {
-          queryName: {
+          name: {
             type: "string",
             description: `当进行查找时,请必须将句子拆分,拆成单个词语,或者关键字进行查找,比如用户询问"结丹是多少修为",那么就提取"结丹"或"修为"等关键字,进行查找,绝对不能直接使用工具查询一整句话,或多个词语,绝对不能加入标点符号,不要修饰词`,
           },
         },
+      },
+    },
+  },
+  //跳过工具
+  {
+    type: "function",
+    function: {
+      name: "Skip",
+      description:
+        "当用户的需求只是查询信息、不需要修改数据或生成内容，或者查询结果里没有相关信息时，调用此工具表示跳过执行层，直接进入总结层",
+      parameters: {
+        type: "object",
+        properties: {
+          reason: {
+            type: "string",
+            description: "简短说明为什么跳过，必须基于查询结果",
+          },
+        },
+        required: ["reason"],
       },
     },
   },

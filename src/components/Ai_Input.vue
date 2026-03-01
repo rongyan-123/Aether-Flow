@@ -30,11 +30,13 @@ async function sendHistory() {
 
   //渲染对话在另一个界面进行,原理是只渲染历史记录就行,这里要做的就是往历史记录里面加东西,他会自动渲染的
 
-  // 清空输入框
+  console.log("进入chatwithAI函数之前用户的问题:", userInput.value);
+  //先拿个中间量保存用户输入
+  const midInput = userInput.value;
+  // 清空输入框,这样中间量就不会消失
   userInput.value = "";
-
   //用 await 等待 chatWithAI 执行完成，拿到真正的 AI 回复字符串
-  const aiReply = await chatWithAI(userInput);
+  const aiReply = await chatWithAI(midInput);
 
   //将对应ai回复输送到历史记录中,为下次回答做准备
   Chat.assistantadd(aiReply);
