@@ -131,6 +131,8 @@ export async function chatWithAI(userInput) {
       for (const tool of AiReply.tool_calls) {
         count++;
         const toolname = tool.function.name; //获取工具名字
+        console.log("当前使用工具名字:", toolname);
+
         const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
         console.log("AI返回的完整物品数组：", toolArg.items); //检查ai返回的物品数组
         //批量添加
@@ -184,6 +186,22 @@ export async function chatWithAI(userInput) {
           }
 
           console.log("查询结束");
+        }
+
+        //  增加功法
+        if (toolname === "PlayerStats_AddTechnique") {
+          console.log("ai调用增加功法工具,增加:", toolArg.name);
+          console.log("当前toolArg内容为:", toolArg);
+
+          toolResult.push(Player.add_Cultivation_Technique(toolArg));
+        }
+
+        //  增加技艺
+        if (toolname === "Technique_Add") {
+          console.log("ai调用增加技艺工具,增加:", toolArg.name);
+          console.log("当前toolArg内容为:", toolArg);
+
+          toolResult.push(Player.add_Technique(toolArg));
         }
       }
       console.log("一共使用工具次数:", count);

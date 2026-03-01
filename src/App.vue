@@ -42,6 +42,9 @@
 </script>
 
 <style scoped>
+/* 全局字体：和角色面板统一的古风宋体/楷体 */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap");
+
 /* 全局重置 */
 * {
   margin: 0;
@@ -49,35 +52,54 @@
   box-sizing: border-box;
 }
 
-/* 1. 最外层容器：和之前风格统一的柔和背景 */
+/* 1. 最外层容器：和角色面板风格完全统一 */
 .app-container {
   display: flex;
   height: 100vh;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: "Noto Serif SC", "KaiTi", "STKaiti", "SimSun", serif;
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 50%, #dcc9a8 100%);
+  position: relative;
 }
 
-/* 2. 左侧侧边栏：优化配色、阴影、过渡动画 */
+/* 牛皮纸全局纹理，和角色面板统一 */
+.app-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 2. 左侧侧边栏：调整宽度+古风风格，解决太宽的问题 */
 .left {
-  width: 220px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-  color: #2c3e50;
-  padding: 25px 20px;
+  width: 190px; /* ✅ 从220px缩窄，解决太宽的问题 */
+  background: linear-gradient(180deg, #f0e0c8 0%, #e8d4b8 100%);
+  padding: 30px 15px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.05);
-  border-right: 1px solid #e8e8e8;
+  gap: 12px;
+  box-shadow: 3px 0 15px rgba(92, 61, 46, 0.12);
+  border-right: 1px solid #c9a87c;
+  position: relative;
+  z-index: 1;
 }
 
-/* 侧边栏标题：优化样式 */
+/* 侧边栏标题：古风风格，和角色面板统一 */
 .left h3 {
-  margin: 0 0 25px 0;
-  font-size: 21px;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #667eea;
+  margin: 0 0 30px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #5c3d2e;
+  border-bottom: 2px solid #8b5a2b;
   padding-bottom: 12px;
   text-align: center;
+  letter-spacing: 4px;
+  text-shadow: 1px 1px 2px rgba(92, 61, 46, 0.15);
 }
 
 /* 链接容器 */
@@ -85,35 +107,38 @@
   margin: 0;
 }
 
-/* 链接样式：更柔和，加过渡动画 */
+/* 链接样式：古风配色，和整体风格统一 */
 .item a {
   display: block;
-  padding: 12px 18px;
-  color: #34495e;
+  padding: 14px 16px;
+  color: #5c3d2e;
   text-decoration: none;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: 8px;
+  font-size: 16px;
   font-weight: 500;
   transition: all 0.2s ease;
+  letter-spacing: 2px;
+  text-align: center;
 }
 
-/* 鼠标悬停 & 激活状态：和之前统一的渐变紫色 */
+/* 鼠标悬停 & 激活状态：古风棕色渐变，和角色面板按钮风格统一 */
 .item a:hover,
 .item a.router-link-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  transform: translateX(3px);
+  background: linear-gradient(135deg, #8b5a2b 0%, #a0522d 100%);
+  color: #faf0e6;
+  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.3);
+  transform: translateX(4px);
 }
 
-/* 3. 右侧内容区：和之前风格统一的背景，去掉多余内边距（让子页面自己控制） */
+/* 3. 右侧内容区：和角色面板背景完全统一，无违和感 */
 .right {
   flex: 1;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
   overflow-y: auto;
-  /* 优化滚动条 */
+  position: relative;
+  z-index: 1;
+  /* 优化滚动条：古风棕色系，和整体统一 */
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #f7fafc;
+  scrollbar-color: #c9a87c #f5e6d3;
 }
 
 .right::-webkit-scrollbar {
@@ -121,15 +146,15 @@
 }
 
 .right::-webkit-scrollbar-track {
-  background: #f7fafc;
+  background: #f5e6d3;
 }
 
 .right::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: #c9a87c;
   border-radius: 3px;
 }
 
 .right::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: #b8865c;
 }
 </style>

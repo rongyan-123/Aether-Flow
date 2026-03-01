@@ -61,6 +61,9 @@ const parseMarkdown = (content) => {
 </script>
 
 <style scoped>
+/* 全局字体：和角色面板统一的古风宋体/楷体 */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap");
+
 /* 全局重置 */
 * {
   margin: 0;
@@ -68,38 +71,58 @@ const parseMarkdown = (content) => {
   box-sizing: border-box;
 }
 
-/* 1. 整体容器：和之前面板风格统一的渐变背景 */
+/* 1. 整体容器：和角色面板风格完全统一的古风背景 */
 .chat-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 50%, #dcc9a8 100%);
   margin: 0;
   padding: 0;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: "Noto Serif SC", "KaiTi", "STKaiti", "SimSun", serif;
+  position: relative;
 }
 
-/* 2. 标题样式：和之前统一 */
+/* 牛皮纸全局纹理，和角色面板统一 */
+.chat-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 2. 标题样式：古风风格，和角色面板统一 */
 h1 {
   text-align: center;
-  padding: 18px;
+  padding: 20px;
   margin: 0;
-  background-color: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  background: linear-gradient(180deg, #faf0e6 0%, #f5e6d3 100%);
+  border-bottom: 1px solid #c9a87c;
+  font-size: 20px;
+  font-weight: 700;
+  color: #5c3d2e;
+  box-shadow: 0 2px 8px rgba(92, 61, 46, 0.08);
+  letter-spacing: 4px;
+  position: relative;
+  z-index: 1;
 }
 
-/* 3. 消息区域：优化滚动条和内边距 */
+/* 3. 消息区域：优化滚动条和内边距，古风风格 */
 .talk {
   flex: 1;
-  padding: 25px 20px;
+  padding: 28px 22px;
   overflow-y: auto;
-  /* 优化滚动条样式 */
+  position: relative;
+  z-index: 1;
+  /* 优化滚动条：古风棕色系，和整体统一 */
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #f7fafc;
+  scrollbar-color: #c9a87c #f5e6d3;
 }
 
 .talk::-webkit-scrollbar {
@@ -107,118 +130,122 @@ h1 {
 }
 
 .talk::-webkit-scrollbar-track {
-  background: #f7fafc;
+  background: #f5e6d3;
 }
 
 .talk::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: #c9a87c;
   border-radius: 3px;
 }
 
 .talk::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: #b8865c;
 }
 
 /* 4. 单条消息容器 */
 .message-item {
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   width: 100%;
   overflow: hidden;
 }
 
-/* 5. 消息气泡通用样式：更柔和的阴影和圆角 */
+/* 5. 消息气泡通用样式：古风风格 */
 .message {
   display: block;
-  padding: 14px 20px;
-  border-radius: 16px;
-  max-width: 85%;
-  font-size: 15px;
-  line-height: 1.8;
+  padding: 15px 22px;
+  border-radius: 12px;
+  max-width: 82%;
+  font-size: 16px;
+  line-height: 1.9;
   word-wrap: break-word;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 3px 10px rgba(92, 61, 46, 0.12);
   transition: transform 0.1s ease;
+  position: relative;
 }
 
-/* 7. 用户消息：渐变蓝色，更柔和 */
+/* 7. 用户消息：古风棕色渐变，靠右 */
 .user {
   float: right;
   clear: both;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #8b5a2b 0%, #a0522d 100%);
+  color: #faf0e6;
   border-top-right-radius: 4px;
 }
 
-/* 8. AI 消息：白色背景，左边框点缀 */
+/* 8. AI 消息：古风米黄背景，左边框点缀 */
 .assistant {
   float: left;
   clear: both;
-  background-color: #ffffff;
-  color: #2c3e50;
+  background: linear-gradient(180deg, #faf0e6 0%, #f5e6d3 100%);
+  color: #5c3d2e;
   border-top-left-radius: 4px;
-  border-left: 3px solid #667eea;
+  border-left: 4px solid #8b5a2b;
 }
 
-/* 9. Markdown 解析样式优化：和整体风格统一 */
+/* 9. Markdown 解析样式优化：古风配色，和整体风格统一 */
 .assistant h1 {
   font-size: 19px;
-  color: #2c3e50;
+  color: #5c3d2e;
   margin: 0 0 12px 0;
   padding: 0 0 8px 0;
   border: none;
-  border-bottom: 2px solid #667eea;
+  border-bottom: 2px solid #8b5a2b;
   text-align: left;
   background: none;
   box-shadow: none;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 2px;
 }
 
 .assistant h2 {
   font-size: 17px;
-  color: #34495e;
+  color: #7a5230;
   margin: 10px 0 8px 0;
   padding: 0;
   font-weight: 600;
+  letter-spacing: 1px;
 }
 
 .assistant h3 {
   font-size: 16px;
-  color: #34495e;
+  color: #7a5230;
   margin: 8px 0 6px 0;
   padding: 0;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .assistant strong {
-  font-weight: 600;
-  color: #667eea;
+  font-weight: 700;
+  color: #8b4513;
 }
 
 .assistant em {
-  color: #7f8c8d;
+  color: #7a5230;
 }
 
 .assistant ul,
 .assistant ol {
-  padding-left: 22px;
+  padding-left: 24px;
   margin: 8px 0;
 }
 
 .assistant li {
   margin: 5px 0;
-  color: #2c3e50;
+  color: #5c3d2e;
 }
 
 .assistant code {
-  background: #f8f9fa;
-  padding: 2px 6px;
+  background: #e8d4b8;
+  padding: 3px 8px;
   border-radius: 4px;
   font-size: 14px;
-  color: #e74c3c;
+  color: #8b4513;
+  border: 1px solid #c9a87c;
 }
 
 .assistant pre {
-  background: #2c3e50;
-  padding: 12px;
+  background: #5c3d2e;
+  padding: 14px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 10px 0;
@@ -226,19 +253,22 @@ h1 {
 
 .assistant pre code {
   background: none;
-  color: #ecf0f1;
+  color: #faf0e6;
   padding: 0;
+  border: none;
 }
 
-/* 10. 输入框区域：和之前面板风格统一 */
+/* 10. 输入框区域：古风风格，和整体统一 */
 .bottom {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  background-color: #fff;
-  padding: 15px 20px;
-  border-top: 1px solid #e8e8e8;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+  background: linear-gradient(180deg, #faf0e6 0%, #f5e6d3 100%);
+  padding: 18px 22px;
+  border-top: 1px solid #c9a87c;
+  box-shadow: 0 -2px 8px rgba(92, 61, 46, 0.08);
+  position: relative;
+  z-index: 1;
 }
 </style>

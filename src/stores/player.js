@@ -16,24 +16,95 @@ export const usePlayerStore = defineStore("Player", {
     fortune: "9/20", //气运
     comprehension: "15/20", //悟性
     cultivation_technique: [
-      { name: "练气篇引导决", grade: "黄阶下品" },
+      { name: "练气决", grade: "黄阶下品" },
       {
-        name: "天衍觉",
+        name: "天衍决",
         grade: "天阶中品",
       },
     ],
     core_cultivation_method: {
-      name: "天衍觉",
+      name: "天衍决",
       grade: "天阶中品",
     },
     combat_technique: [
-      { name: "八极崩", grade: "玄阶下品" },
-      { name: "大荒囚天指", grade: "地阶中品" },
+      { name: "八极崩", grade: "玄阶下品", level: "大成" },
+      { name: "大荒囚天指", grade: "地阶中品", level: "圆满" },
     ],
-    movement_technique: [{ name: "踏雪无痕", grade: "玄阶下品" }],
-    other_technique: [{ name: "探测术", grade: "黄阶下品" }],
+    movement_technique: [
+      { name: "踏雪无痕", grade: "玄阶下品", level: "大成" },
+    ],
+    other_technique: [{ name: "探测术", grade: "黄阶下品", level: "小成" }],
   }),
   actions: {
-    add() {},
+    add_Cultivation_Technique(obj) {
+      //先遍历功法列表,看看有没有相同的
+      for (const index of this.cultivation_technique) {
+        if (index.name === obj.name) {
+          console.log("功法已经会了");
+          return "抱歉,这本功法你已经会了";
+        }
+      }
+
+      //如果没发现相同,再加进去
+      this.cultivation_technique.push(obj);
+      console.log("成功加入功法");
+
+      return `已加入新功法!${obj.name},品阶为:${obj.grade}`;
+    },
+    change_coreTechnique(obj) {
+      this.core_cultivation_method.name = obj.name;
+      this.core_cultivation_method.grade = obj.grade;
+    },
+    add_Technique(obj) {
+      console.log("成功进入增加技艺工具");
+      console.log("当前技艺:", obj);
+      //==============增加战技
+      if (obj.type === "战技") {
+        console.log("成功进入增加战技工具,当前战技名字:", obj.name);
+
+        //先遍历功法列表,看看有没有相同
+        for (const index of this.combat_technique) {
+          if (index.name === obj.name) {
+            console.log("战技已经会了");
+            return "抱歉,这本战技你已经会了";
+          }
+        }
+        //如果没发现相同,再加进去
+        this.combat_technique.push(obj);
+        console.log("成功学会战技");
+
+        return `已加入新战技!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
+      }
+      //=============身法增加
+      if (obj.type === "身法") {
+        //先遍历功法列表,看看有没有相同
+        for (const index of this.movement_technique) {
+          if (index.name === obj.name) {
+            console.log("身法已经会了");
+            return "抱歉,这本身法你已经会了";
+          }
+        }
+        //如果没发现相同,再加进去
+        this.movement_technique.push(obj);
+        console.log("成功学会身法");
+
+        return `已加入新身法!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
+      }
+      //=============其他法门增加
+      if (obj.type === "其他法门") {
+        //先遍历功法列表,看看有没有相同
+        for (const index of this.other_technique) {
+          if (index.name === obj.name) {
+            console.log("该法门已经会了");
+            return "抱歉,这本法门你已经会了";
+          }
+        }
+        //如果没发现相同,再加进去
+        this.other_technique.push(obj);
+        console.log("成功学习法门");
+
+        return `已加入新法门!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
+      }
+    },
   },
 });
