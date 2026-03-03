@@ -14,6 +14,10 @@
         <span class="value">{{ PlayerStore.age }}岁</span>
       </div>
       <div class="info-row">
+        <span class="label">寿元上限</span>
+        <span class="value">{{ PlayerStore.max_age }}岁</span>
+      </div>
+      <div class="info-row">
         <span class="label">境界</span>
         <span class="value highlight">{{ PlayerStore.level }}</span>
       </div>
@@ -144,6 +148,7 @@
             <div class="tech-info">
               <span class="tech-name">{{ tech.name }}</span>
               <span class="grade-tag">{{ tech.grade }}</span>
+              <span class="grade-tag">{{ tech.level }}</span>
             </div>
           </li>
         </ul>
@@ -158,6 +163,7 @@
             <div class="tech-info">
               <span class="tech-name">{{ tech.name }}</span>
               <span class="grade-tag">{{ tech.grade }}</span>
+              <span class="grade-tag">{{ tech.level }}</span>
             </div>
           </li>
         </ul>
@@ -169,6 +175,7 @@
             <div class="tech-info">
               <span class="tech-name">{{ tech.name }}</span>
               <span class="grade-tag">{{ tech.grade }}</span>
+              <span class="grade-tag">{{ tech.level }}</span>
             </div>
           </li>
         </ul>

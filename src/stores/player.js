@@ -7,6 +7,7 @@ export const usePlayerStore = defineStore("Player", {
     //此仓库没有data,是全部放在state里面的,所以访问的时候要写.$state
     name: "齐尘 ",
     age: 16,
+    max_age: 80,
     level: "炼气期三层",
     numerical_cultivation: "309/400",
     spiritual_root_type: "火_水_木",
