@@ -12,7 +12,6 @@
 
 <script setup>
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
-import { chatWithAI } from "@/utils/ai";
 import { ref } from "vue";
 const Chat = useChatHistoryStore();
 const userInput = ref("");
@@ -35,11 +34,24 @@ async function sendHistory() {
   const midInput = userInput.value;
   // 清空输入框,这样中间量就不会消失
   userInput.value = "";
-  //用 await 等待 chatWithAI 执行完成，拿到真正的 AI 回复字符串
-  const aiReply = await chatWithAI(midInput);
 
+  try {
+    const response = await fetch("http://localhost:3000/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ midInput }),
+    });
+    const data = await response.json(); //需要await
+    console.log(data);
+  } catch (error) {
+    console.log(error);
+  }
+
+  // const aiReply = data.choice[0].message;
   //将对应ai回复输送到历史记录中,为下次回答做准备
-  Chat.assistantadd(aiReply);
+  // Chat.assistantadd(aiReply.content);
 }
 </script>
 

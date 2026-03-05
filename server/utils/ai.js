@@ -33,7 +33,9 @@ const LLM = "gpt-4o-mini";
 //3,面向用户层:第三次发送api,总结以上所有工具回复,给用户做出最后的总结
 
 //该函数拿到的是ai回复,类型是字符串
-export async function chatWithAI(userInput) {
+async function chatWithAI(userInput) {
+  console.log("成功进入chatWithAI");
+
   const World_Rule = `
     // ==============================================
 // 一、核心基调（凡人流灵魂）
@@ -573,3 +575,5 @@ ${breakthrough}
     console.error("出错了!!!", error);
   }
 }
+
+module.exports = { chatWithAI };
