@@ -1,17 +1,27 @@
-import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
-import { queryName } from "@/StaticData/AllData";
-import { useInventoryStore } from "@/stores/Inventory";
-import { usePlayerStore } from "@/stores/player";
-import { tools } from "@/utils/aitools";
+const { PlayerData, backpack, history } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
+//此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
+//举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
+
+//import { queryName } from "@/StaticData/AllData";
+//import { usePlayerStore } from "@/stores/player";
+const { tools } = require("./aitools");
 //chatGPT地址
 // 原 API 地址
-const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+//const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 // 换成备用地址（二选一）
 //const API_URL = "https://api.chatanywhere.com.cn/v1/chat/completions";
 // 或
 // const API_URL = "https://api.openai-proxy.com/v1/chat/completions";
+//豆包:
+//2.0
+const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+//const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
-const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
+//
+//const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
+
+//豆包key
+const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -24,7 +34,7 @@ const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-const LLM = "gpt-4o-mini";
+const LLM = "doubao-seed-2-0-pro-260215";
 
 // ==================== 核心请求函数 ====================
 //分层如下:
@@ -35,6 +45,7 @@ const LLM = "gpt-4o-mini";
 //该函数拿到的是ai回复,类型是字符串
 async function chatWithAI(userInput) {
   console.log("成功进入chatWithAI");
+  console.log("用户问题", userInput);
 
   const World_Rule = `
     // ==============================================
@@ -114,16 +125,18 @@ ${World_Rule}
 ---
 
 【强制执行规则（违反任何一条都视为失败）】
-1.  【只能调用查询工具,突破工具】：这一层你**能调用的工具只有 Query_Data和Check_Breakthrough**，绝对不能调用 Backpack_additems、PlayerStats_AddTechnique、Technique_Add 等任何修改/添加类工具；
-2.  【如果查询,必须拆关键字查询】：提取用户问题中最核心的1-2个名词，不能查询整句话，不能加标点；
+1.  【只能调用查询工具,突破工具】：这一层你**能调用的工具只有 Query_Data和Check_Breakthrough还有Skip**，绝对不能调用 Backpack_additems、PlayerStats_AddTechnique、Technique_Add 等任何修改/添加类工具；
+2.  【如果查询,必须拆关键字查询】：提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询；
 3.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
-4.  【查询结果必须返回】：如果用户问了问题，必须调用 Query_Data，不能直接编造答案。
+4.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data，不能直接编造答案。
+5.  【如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip】:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
+
 
 【绝对禁止】
 - 禁止有任何修改用户背包、面板数据的想法或行为；
 - 禁止编造查询结果；
 - 禁止在这一层直接解决用户的“添加/学习”需求，只负责查询信息。
-
+- 绝对禁止返回完全空值,用Skip工具替换空值
 
 【正反例子】
 ---
@@ -164,11 +177,9 @@ ${World_Rule}
     "时间戳：",
     new Date().getTime(),
   );
-  const history = useChatHistoryStore(); //创建历史记录实例
-  const backpack = useInventoryStore(); //创建背包实例
-  const Player = usePlayerStore(); //创建用户个人面板实例
-  const realbackpackdata = JSON.stringify(backpack.data, null, 2); //转化背包内数据为字符串
-  const realPlayerdata = JSON.stringify(Player.$state, null, 2); //转化面板内数据为字符串,请注意,面板仓库里没有data,全是散的,放在state里面
+
+  const realbackpackdata = JSON.stringify(backpack, null, 2); //转化背包内数据为字符串
+  const realPlayerdata = JSON.stringify(PlayerData, null, 2); //转化面板内数据为字符串,请注意,面板仓库里没有data,全是散的,放在state里面
 
   //每次发送请求都会更新一次(原理是每次都用replace替换prompt里面的数据),供ai同步读取
   const first_finalSystemPrompt = prompt.replace(
@@ -179,8 +190,8 @@ ${World_Rule}
     "PlayerStats_DATA",
     realPlayerdata,
   );
-  console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
-  console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
+  // console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
+  // console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
 
   //创建最终的message
   const messages = [
@@ -189,7 +200,7 @@ ${World_Rule}
       role: "system",
       content: finalSystemPrompt2,
     },
-    ...history.data,
+    ...history.chatHistory,
   ];
 
   try {
@@ -230,6 +241,11 @@ ${World_Rule}
       console.error("API 授权失败/请求错误：", data.error);
       return "抱歉，API 请求失败（请换个模型）";
     }
+    console.log("第一次发送api结束,输入消耗token:", data.usage.prompt_tokens);
+    console.log(
+      "第一次发送api结束,输出消耗token:",
+      data.usage.completion_tokens,
+    );
     console.log("第一次发送api结束,总计消耗token:", data.usage.total_tokens);
     const AiReply = data.choices[0].message; //拿到回复中的有效内容
 
@@ -245,20 +261,21 @@ ${World_Rule}
     //   const toolArg = JSON.parse(tool.function.arguments);
     //   console.log("当前查询:", toolArg.name);
     // }
-    //开始第一次查询
-    if (AiReply.tool_calls && AiReply.tool_calls.length > 0) {
-      console.log("成功进入查询");
-      //遍历所有查询的内容
-      for (const tool of AiReply.tool_calls) {
-        const toolname = tool.function.name; //获取工具名字
-        const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
-        console.log("当前查询:", toolArg.name);
-        if (toolname === "Query_Data") {
-          QueryResult.push(queryName(toolArg.name));
-        }
-      }
-      console.log("查询结束");
-    }
+
+    // 开始第一次查询
+    // if (AiReply.tool_calls && AiReply.tool_calls.length > 0) {
+    //   console.log("成功进入查询");
+    //   //遍历所有查询的内容
+    //   for (const tool of AiReply.tool_calls) {
+    //     const toolname = tool.function.name; //获取工具名字
+    //     const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
+    //     console.log("当前查询:", toolArg.name);
+    //     if (toolname === "Query_Data") {
+    //       QueryResult.push(queryName(toolArg.name));
+    //     }
+    //   }
+    //   console.log("查询结束");
+    // }
     console.log("🔴 2, 进入工具执行层.");
 
     //重要!!!//将工具结果转为json格式,否则ai无法读取工具回复结果
@@ -322,7 +339,7 @@ ${tools_json}
         role: "system",
         content: prompt2,
       },
-      ...history.data,
+      ...history.chatHistory,
     ];
     const Aiconfiguration2 = {
       //配置对象
@@ -356,13 +373,20 @@ ${tools_json}
     console.log("第二次发送api");
     const response2 = await fetch(API_URL, Aiconfiguration2);
     const data2 = await response2.json();
-    // ✅ 防御性检查：先判断 choices 有没有、长度够不够
+    console.log("第二次API完整响应:", JSON.stringify(data2, null, 2)); // 先打印，看实际返回
     if (!data2.choices || data2.choices.length === 0) {
-      console.error("API 返回异常，没有 choices：", data);
-      return "抱歉，玄机子刚刚推演出错了，请稍后再试...";
+      console.error("第二次API返回异常，没有choices:", data2);
+      // 这里可以返回一个友好的错误信息，或者尝试使用 Skip 的 fallback
+      return "抱歉，玄机子暂时无法回应，请稍后再试。";
     }
+
     const AiReply2 = data2.choices[0].message; // 包含所有回复和工具使用情况
-    console.log("消耗token:", data2.usage.total_tokens);
+    console.log("第二次发送api结束,输入消耗token:", data2.usage.prompt_tokens);
+    console.log(
+      "第二次发送api结束,输出消耗token:",
+      data2.usage.completion_tokens,
+    );
+    console.log("第二次发送api结束,总计消耗token:", data2.usage.total_tokens);
 
     // // 收集所有工具的执行结果,放在全局中使用
     const toolResult = [];
@@ -438,7 +462,7 @@ ${tools_json}
           console.log("ai调用增加功法工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(Player.add_Cultivation_Technique(toolArg));
+          toolResult.push(PlayerData.add_Cultivation_Technique(toolArg));
         }
 
         //  增加技艺
@@ -446,7 +470,7 @@ ${tools_json}
           console.log("ai调用增加技艺工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(Player.add_Technique(toolArg));
+          toolResult.push(PlayerData.add_Technique(toolArg));
         }
 
         //生成剧情
@@ -468,6 +492,12 @@ ${tools_json}
           breakthrough.push(toolArg.result);
         }
 
+        //跳过
+        if (toolname === "Skip") {
+          console.log("进入跳过工具");
+          console.log("ai给出原因为", toolArg.reason);
+          toolResult.push("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
+        }
         //
       }
       console.log("工具执行结束,一共使用工具次数:", count);
@@ -526,14 +556,14 @@ ${breakthrough}
       .replace("USER_QUESTION", userInput)
       .replace("TOOL_RESULT", toolResultStr);
 
-    //创建第san个messages
+    //创建第3个messages
     const messages3 = [
       {
         id: 1,
         role: "system",
         content: finalSystemPrompt,
       },
-      ...history.data,
+      ...history.chatHistory,
     ];
     if (data2.choices && data2.choices.length > 0) {
       //防御性编程
@@ -558,6 +588,15 @@ ${breakthrough}
       //第三次发送给ai
       const response3 = await fetch(API_URL, Aiconfiguration3); //发送并收到回复
       const data3 = await response3.json(); //转为json格式
+      console.log(
+        "第三次发送api结束,输入消耗token:",
+        data3.usage.prompt_tokens,
+      );
+      console.log(
+        "第三次发送api结束,输出消耗token:",
+        data3.usage.completion_tokens,
+      );
+      console.log("第三次发送api结束,总计消耗token:", data3.usage.total_tokens);
       const AiReply3 = data3.choices[0].message; //拿到回复中的有效内容
       //判断 response3.ok，先检查请求是否成功（比如 401 能提前发现）
       if (!response3.ok) {

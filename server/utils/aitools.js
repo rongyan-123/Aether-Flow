@@ -1,12 +1,12 @@
 //======================== ai调用工具 ============================
-export const tools = [
+const tools = [
   {
     //添加物品
     type: "function",
     function: {
       name: "Backpack_additems",
       description:
-        "【只能调用一次】这是一个向背包中添加物品的工具(可批量添加),当用户获得(包括且不限于捡到,抢到,击杀获得等等)物品时,在背包数据中添加物品,绝对不能拆分成多次调用",
+        "这是一个向背包中添加物品的工具(可批量添加),当用户获得(包括且不限于捡到,抢到,击杀获得等等)物品时,在背包数据中添加物品,绝对不能拆分成多次调用",
       parameters: {
         type: "object",
         required: ["items"], // 必填：必须传入物品数组
@@ -367,3 +367,4 @@ export const tools = [
     },
   },
 ];
+module.exports = { tools };

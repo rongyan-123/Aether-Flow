@@ -44,14 +44,12 @@ async function sendHistory() {
       body: JSON.stringify({ midInput }),
     });
     const data = await response.json(); //需要await
-    console.log(data);
+    console.log(data.reply);
+    //将对应ai回复输送到历史记录中,为下次回答做准备
+    Chat.assistantadd(data.reply);
   } catch (error) {
     console.log(error);
   }
-
-  // const aiReply = data.choice[0].message;
-  //将对应ai回复输送到历史记录中,为下次回答做准备
-  // Chat.assistantadd(aiReply.content);
 }
 </script>
 
