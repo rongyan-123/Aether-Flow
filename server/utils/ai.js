@@ -1,27 +1,27 @@
-const { PlayerData, backpack, history } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
+const { PlayerData, backpack, history, query_backpack } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
 
 //import { queryName } from "@/StaticData/AllData";
 //import { usePlayerStore } from "@/stores/player";
-const { tools } = require("./aitools");
+const { layer1Tools, layer2Tools } = require("./aitools");
 //chatGPT地址
 // 原 API 地址
-//const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 // 换成备用地址（二选一）
 //const API_URL = "https://api.chatanywhere.com.cn/v1/chat/completions";
 // 或
 // const API_URL = "https://api.openai-proxy.com/v1/chat/completions";
 //豆包:
 //2.0
-const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+//const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
 //
-//const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
+const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
+//const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -95,7 +95,7 @@ async function chatWithAI(userInput) {
   //第一层ai提示词,仅使用工具:查询,判断突破
   const prompt = `
   【角色设定】
-你是修仙世界的【古籍查阅使】，你的**职责**是：分析用户意图,和使用调用查询工具Query_Data,突破判断工具Check_Breakthrough对用户行为进行分析
+你是三层架构中的第一层,【查询与思考者】,你的**职责**是：分析用户意图,和使用各种工具对用户行为进行分析,以及查询相关设定和信息,给后续的二层和三层做信息铺垫
 
 【核心任务】
 1.  分析用户的当前行为、场景、意图；
@@ -104,19 +104,22 @@ async function chatWithAI(userInput) {
     - 【物品】：用户提到的所有物品的价值、品阶、用途；
     - 【规则】：当前行为涉及的修仙界规则（坊市交易、杀人夺宝、突破等）；
     - 【设定】：用户提到的所有专有名词的设定；
-3.  可以多次调用查询工具，查询多个不同的关键字。
-4.  **必须、只能、优先**调用【Query_Data】工具进行查询；
-5.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
-6.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
+    - 【行为】：用户执行的某个行为,所关联的所有事物;
+3.  可以多次调用查询工具，查询多个不同的关键字,如果查询,必须拆关键字查询提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询。
+4.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
+5.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
+6.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
+7.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
+
+【只允许调用的工具列表】
+跳过:Skip
+查询设定和物品描述等等:Query_Data
+查询用户背包:Query_Backpack
+查询用户面板:Query_PlayerStats
+判断突破是否成功:Check_Breakthrough
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
 ---
-用户背包数据：
-{{backpack_DATA}}
-
-用户个人面板数据：
-{{PlayerStats_DATA}}
-
 用户原始问题：
 ${userInput}
 
@@ -124,12 +127,10 @@ ${userInput}
 ${World_Rule}
 ---
 
-【强制执行规则（违反任何一条都视为失败）】
-1.  【只能调用查询工具,突破工具】：这一层你**能调用的工具只有 Query_Data和Check_Breakthrough还有Skip**，绝对不能调用 Backpack_additems、PlayerStats_AddTechnique、Technique_Add 等任何修改/添加类工具；
-2.  【如果查询,必须拆关键字查询】：提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询；
-3.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
-4.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data，不能直接编造答案。
-5.  【如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip】:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
+【注意事项（违反任何一条都视为失败）】
+1.  【如果查询,必须拆关键字查询】：提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询；
+2.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
+3.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data,查询对应关联的事物，不能直接编造答案。
 
 
 【绝对禁止】
@@ -218,11 +219,8 @@ ${World_Rule}
         messages: messages, //发送以下数据:历史记录,背包
         temperature: 0.7,
         //stream: true, //开启流式输出
-        tools: tools, //工具
-        type: "function",
-        function: {
-          name: "auto",
-        }, //第一层只能调用查询工具,判断突破的工具
+        tools: layer1Tools, //工具
+        tool_choice: "auto",
       }),
     };
 
@@ -262,32 +260,41 @@ ${World_Rule}
     //   console.log("当前查询:", toolArg.name);
     // }
 
-    // 开始第一次查询
-    // if (AiReply.tool_calls && AiReply.tool_calls.length > 0) {
-    //   console.log("成功进入查询");
-    //   //遍历所有查询的内容
-    //   for (const tool of AiReply.tool_calls) {
-    //     const toolname = tool.function.name; //获取工具名字
-    //     const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
-    //     console.log("当前查询:", toolArg.name);
-    //     if (toolname === "Query_Data") {
-    //       QueryResult.push(queryName(toolArg.name));
-    //     }
-    //   }
-    //   console.log("查询结束");
-    // }
+    //开始第一次查询
+    if (AiReply.tool_calls && AiReply.tool_calls.length > 0) {
+      console.log("成功进入查询");
+      //遍历所有工具
+      for (const tool of AiReply.tool_calls) {
+        const toolname = tool.function.name; //获取工具名字
+        const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
+        console.log("当前工具:", toolname);
+        console.log("当前ai返回的参数:", toolArg);
+        // if (toolname === "Query_Data") {
+        //    console.log("当前查询:", toolArg.name);
+        //   QueryResult.push(queryName(toolArg.name));
+        // }
+        //查询背包和面板
+        if (toolname === "Query_Backpack" && toolArg.read_ro_no === "yes") {
+          console.log("调用读取背包工具中....");
+          QueryResult.push(query_backpack());
+        }
+        if (toolname === "Query_PlayerStats" && toolArg.read_ro_no === "yes") {
+          console.log("调用读取面板工具中....");
+          QueryResult.push(query_backpack());
+        }
+      }
+      console.log("查询结束");
+    }
     console.log("🔴 2, 进入工具执行层.");
 
-    //重要!!!//将工具结果转为json格式,否则ai无法读取工具回复结果
-    const tools_json = JSON.stringify(tools, null, 2);
     const prompt2 = `
-【角色设定】:你是修仙世界的【工具执行官】，你的唯一职责是：基于已有的查询结果，严格从给定的工具列表中选择最合适的工具执行，绝对不能做任何超出工具范围的事。
+【角色设定】:你是三层架构中的第二层【工具执行官】，你的唯一职责是：基于前一层已有的查询结果，严格从给定的工具列表中选择最合适的工具执行，绝对不能做任何超出工具范围的事。
 
 【核心任务】
 1.  仔细阅读下方的【查询结果】【用户原始问题】【可用工具列表】；
 2.  严格基于【查询结果】，判断用户的需求是什么；
 3.  从【可用工具列表】中选择**唯一最合适**的工具执行；
-4.  如果需要跳过，就调用【Skip】工具。
+4.  如果实在没有工具使用,那就跳过，就调用【Skip】工具。
 
 【输入上下文】
 ---
@@ -297,8 +304,14 @@ ${QueryResult}
 【2. 用户原始问题】
 ${userInput}
 ---
-【3. 可用工具列表（你只能从这里选，绝对不能用别的，而且这里面的查询工具你也不需要用）】
-${tools_json}
+【3. 可用工具列表】
+添加物品Backpack_additems
+删除物品Backpack_reduceitems
+跳过工具Skip
+修改面板属性Player_changeAttribute
+增加所会的功法PlayerStats_AddTechnique
+增加技艺功法Technique_Add
+生成剧情Generate_Plot
 ---
 
 【强制执行规则（违反任何一条都视为失败）】
@@ -323,15 +336,13 @@ ${tools_json}
 【查询结果】：练气篇引导决是修炼功法，黄阶下品
 【用户问题】：给我介绍一下练气篇引导决
 你的行动：调用 Skip 工具，参数 reason="用户只是查询信息，不需要修改数据"
-
-✅ 正确示范3：
-【查询结果】：没有找到轻身术的信息
-【用户问题】：把轻身术加入我的面板
-你的行动：调用 Skip 工具，参数 reason="查询结果里没有找到轻身术的相关信息"
 ---
 
 现在，请基于以上所有规则，执行你的任务。
 `;
+
+    console.log("当前历史记录已经有:", history);
+
     //新message2
     const messages2 = [
       {
@@ -365,7 +376,7 @@ ${tools_json}
         messages: messages2, //发送以下数据:历史记录,背包
         temperature: 0.7,
         //stream: true, //开启流式输出
-        tools: tools, //工具
+        tools: layer2Tools, //工具
         tool_choice: "auto", //自动选择调用,注意这里tool没有s的
       }),
     };

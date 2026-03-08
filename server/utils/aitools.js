@@ -1,5 +1,44 @@
 //======================== ai调用工具 ============================
 const tools = [
+  //查询背包
+  {
+    type: "function",
+    function: {
+      name: "Query_Backpack",
+      description: `这是一个读取背包内物品的工具,当用户的行为和话语涉及到使用物品,就需要读取背包.`,
+      parameters: {
+        type: "object",
+        required: ["read_or_no"],
+        properties: {
+          read_or_no: {
+            type: "string",
+            enum: ["yes"],
+            description: "只需要判断是否填yes就行,判断是否读取背包数据",
+          },
+        },
+      },
+    },
+  },
+  //查询面板
+  {
+    type: "function",
+    function: {
+      name: "Query_PlayerStats",
+      description: `这是一个读取用户面板的工具,当用户的行为和话语涉及到面板内的属性和功法等等,就需要读取面板.`,
+      parameters: {
+        type: "object",
+        required: ["read_or_no"],
+        properties: {
+          read_or_no: {
+            type: "string",
+            enum: ["yes"],
+            description: "只需要判断是否填yes就行,判断是否读取面板数据",
+          },
+        },
+      },
+    },
+  },
+
   {
     //添加物品
     type: "function",
@@ -146,7 +185,7 @@ const tools = [
       `,
       parameters: {
         type: "object",
-        required: [],
+        required: [], //可选,没有要求
         properties: {
           age: {
             type: "number",
@@ -160,6 +199,43 @@ const tools = [
               之后的金丹,元婴,化神,也都是你自己决定当前修为处于什么同一个大境界内的什么时期
               如果是大境界的突破,则需要非常详细的判断是否成功
               `,
+          },
+          numerical_cultivation: {
+            type: "number",
+            description:
+              "当前修为数值，代表修炼积累的总量。根据事件、修炼、丹药等增加或减少。",
+            minimum: 0,
+          },
+          spiritual_root_type: {
+            type: "string",
+            description:
+              "灵根类型，例如：天灵根、变异灵根、双灵根、三灵根、伪灵根等。",
+          },
+          spiritual_root_grade: {
+            type: "string",
+            description:
+              "灵根等级或品阶，如：一品、二品等，或者根据设定自定义。",
+          },
+          spiritual_power: {
+            type: "number",
+            description:
+              "灵力值，代表当前可用的灵力总量，用于驱动功法、法术等。",
+            minimum: 0,
+          },
+          potential: {
+            type: "number",
+            description: "根骨，代表修炼天赋和潜力，影响修炼速度和瓶颈突破。",
+            minimum: 0,
+          },
+          fortune: {
+            type: "number",
+            description: "气运，影响奇遇、事件结果、突破成功率等。",
+            minimum: 0,
+          },
+          comprehension: {
+            type: "number",
+            description: "悟性，影响学习功法、领悟技能的速度和深度。",
+            minimum: 0,
           },
         },
       },
@@ -367,4 +443,23 @@ const tools = [
     },
   },
 ];
+
+const layer1Tools = [
+  "Query_Data",
+  "Skip",
+  "Query_Backpack",
+  "Query_PlayerStats",
+  "Check_Breakthrough",
+];
+
+const layer2Tools = [
+  "Backpack_additems",
+  "Skip",
+  "Backpack_reduceitems",
+  "Player_changeAttribute",
+  "PlayerStats_AddTechnique",
+  "Technique_Add",
+  "Generate_Plot",
+];
+module.exports = { layer1Tools, layer2Tools };
 module.exports = { tools };
