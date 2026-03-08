@@ -1,4 +1,10 @@
-const { PlayerData, backpack, history, query_backpack } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
+const {
+  PlayerData,
+  backpack,
+  history,
+  query_backpack,
+  query_playerStats,
+} = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
 
@@ -40,7 +46,7 @@ const LLM = "doubao-seed-2-0-pro-260215";
 //分层如下:
 //1,数据查询层:第一次发送api,调用查询工具,获取对应数据
 //2,执行工具层:第二次发送api,根据数据选择接下来要执行的工具,比如添加物品,添加功法等等,以后的生成剧情也会在这里，战斗判断也会在这里
-//3,面向用户层:第三次发送api,总结以上所有工具回复,给用户做出最后的总结
+//3,面向用户层:第三次发送api,读取第一层的查询结果,还有第二层的工具返回结果,给用户做出最后的总结
 
 //该函数拿到的是ai回复,类型是字符串
 async function chatWithAI(userInput) {
@@ -280,8 +286,9 @@ ${World_Rule}
         }
         if (toolname === "Query_PlayerStats" && toolArg.read_ro_no === "yes") {
           console.log("调用读取面板工具中....");
-          QueryResult.push(query_backpack());
+          QueryResult.push(query_playerStats());
         }
+        console.log("当前QueryResult内容:", QueryResult);
       }
       console.log("查询结束");
     }
@@ -534,16 +541,16 @@ ${userInput}
    - 可适当加入修仙氛围的表述，但不要过于冗余；
    - 不要提及你是 AI，不要暴露任何非修仙世界的设定。
    - 回答中,可适当在句子中的关键词处加上markdown语法的标记,变蓝,变红等等,让用户看得更清楚,这里你自行决定,尽量多一些,最好每一句都有一个
+   - 回复尽量多分行,不要一句话写到底,要让用户拥有不错的阅读体验
+
 4. **注意事项**：
    - 如果有查询设定等操作,绝对要把设定尽量转述,不要遗漏任何内容
    - 剧情的发展必须要参考,同时也需要结合查询结果,工具返回结果,背包,个人面板等等信息,将剧情的bug进行修改,比如名字对不上(你就改为用户的名字),物品没有在数据库中出现(换一个物品)等等,所有bug和不合理的地方都要修改,然后告知用户发生了什么,剧情不要一口气给用户,而是任何一个选择,都要让用户进行
    - 以上所有回复,生成内容,修改后的剧情,剧情中人物行动逻辑,包括用户自己的选择,都必须遵照世界观,绝对不可以脱离世界观而独立存在
 
 【已知信息（如果用不到就自然忽略）】
-- 用户背包内容:
-{{backpack_DATA}}
-- 用户当前面板：
-  {{PlayerStats_DATA}}
+- 第一层查询结果(如果有)
+${QueryResult}
 - 世界观(底层逻辑)
 ${World_Rule}
 - 用户突破结果(如果有)
@@ -552,8 +559,7 @@ ${breakthrough}
 【必须读取和总结,回复的信息】
 - 用户原始请求(精准回复)：{{USER_QUESTION}}
 - 工具返回的结果(必须读取)：{{TOOL_RESULT}}
-- 根据用户问题,返回的查询结果(必须参考):${QueryResult}
-- 必须遵循的剧情发展:${Plot}
+- 必须遵循的剧情发展(如果有):${Plot}
 
 请直接生成你的回复：`;
 
@@ -562,8 +568,6 @@ ${breakthrough}
 
     // ✅ 链式调用 replace，一口气搞定，不用写 finalSystemPrompt1/2/3/4/5
     const finalSystemPrompt = prompt3
-      .replace("backpack_DATA", realbackpackdata)
-      .replace("PlayerStats_DATA", realPlayerdata)
       .replace("USER_QUESTION", userInput)
       .replace("TOOL_RESULT", toolResultStr);
 
