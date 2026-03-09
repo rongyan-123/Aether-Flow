@@ -8,7 +8,7 @@ const PlayerData = JSON.parse(rawData);
 function query_playerStats() {
   console.log("进入读取面板工具");
   console.log("面板如下:", PlayerData);
-  return `面板如下:${PlayerData}`;
+  return `用户面板如下:${JSON.stringify(PlayerData, null, 2)}`;
 }
 
 //💡2,增加修炼功法
@@ -105,7 +105,15 @@ function add_Technique(obj) {
 const rawInventory = fs.readFileSync("./store/inventory.json", "utf8");
 const backpack = JSON.parse(rawInventory);
 console.log("成功读取背包");
-//💡1,增加物品函数
+
+//💡1, 查询背包
+function query_backpack() {
+  console.log("进入读取背包工具");
+  console.log("背包内物品如下:", backpack);
+  return `背包内物品如下:${JSON.stringify(backpack, null, 2)}`;
+}
+
+//💡2,增加物品函数
 function addItem(obj) {
   console.log("成功进入添加物品工具");
   for (const item of backpack) {
@@ -140,7 +148,7 @@ function addItem(obj) {
       成功加入物品:${obj.name},价值:${obj.value},数量为:${obj.mount}`;
 }
 
-//💡2,减少物品函数
+//💡3,减少物品函数
 function reduceItem(obj) {
   //使用遍历,来做到同类物品堆叠,注意,此处只对一个对象进行操作
   for (const item of backpack.data) {
@@ -168,13 +176,6 @@ function reduceItem(obj) {
   return `没有在物品栏中找到${obj.name}`;
 }
 
-//💡3, 查询背包
-function query_backpack() {
-  console.log("进入读取背包工具");
-  console.log("背包内物品如下:", backpack);
-  return `背包内物品如下:${backpack}`;
-}
-
 //=======================================🔴读取历史记录 ,开发阶段,为节省token,暂时不保存到本地
 const rawhistory = fs.readFileSync(
   "./AiHistoryStores/ChatHistory.json",
@@ -200,7 +201,7 @@ function assistantadd(input) {
 
 //======================================🔴读取世界观
 const rawAllData = fs.readFileSync("./StaticData/AllData.json", "utf8");
-const AllData = JSON.parse(rawAllData);
+const AllData = JSON.parse(rawAllData); //传出的是一个对象,里面的内容为{ AllData:[....] }
 //console.log(AllData);
 
 //======================================🔴函数测试

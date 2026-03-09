@@ -23,7 +23,7 @@ const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 //const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
-//
+////
 const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
@@ -40,7 +40,8 @@ const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-const LLM = "doubao-seed-2-0-pro-260215";
+const LLM = "gpt-4o-mini";
+//const LLM = "doubao-seed-2-0-pro-260215";
 
 // ==================== 核心请求函数 ====================
 //分层如下:
@@ -122,7 +123,7 @@ async function chatWithAI(userInput) {
 查询设定和物品描述等等:Query_Data
 查询用户背包:Query_Backpack
 查询用户面板:Query_PlayerStats
-判断突破是否成功:Check_Breakthrough
+
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
 ---
@@ -280,13 +281,15 @@ ${World_Rule}
         //   QueryResult.push(queryName(toolArg.name));
         // }
         //查询背包和面板
-        if (toolname === "Query_Backpack" && toolArg.read_ro_no === "yes") {
+        if (toolname === "Query_Backpack") {
           console.log("调用读取背包工具中....");
-          QueryResult.push(query_backpack());
+          const result = query_backpack();
+          QueryResult.push(result);
         }
-        if (toolname === "Query_PlayerStats" && toolArg.read_ro_no === "yes") {
+        if (toolname === "Query_PlayerStats") {
           console.log("调用读取面板工具中....");
-          QueryResult.push(query_playerStats());
+          const result = query_playerStats();
+          QueryResult.push(result);
         }
         console.log("当前QueryResult内容:", QueryResult);
       }
@@ -319,6 +322,7 @@ ${userInput}
 增加所会的功法PlayerStats_AddTechnique
 增加技艺功法Technique_Add
 生成剧情Generate_Plot
+判断突破是否成功:Check_Breakthrough
 ---
 
 【强制执行规则（违反任何一条都视为失败）】
@@ -516,7 +520,19 @@ ${userInput}
           console.log("ai给出原因为", toolArg.reason);
           toolResult.push("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
         }
-        //
+
+        //突破
+        if (toolname === "Check_Breakthrough") {
+          console.log("进入突破检测工具");
+          console.log("ai给出的突破结果为", toolArg.result);
+          toolResult.push(
+            "使用突破检测工具,以下是ai给出的缘由",
+            toolArg.result,
+          );
+
+          //以下是具体操作数值
+          //......
+        }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
       console.log("toolResult==", toolResult);
@@ -549,7 +565,7 @@ ${userInput}
    - 以上所有回复,生成内容,修改后的剧情,剧情中人物行动逻辑,包括用户自己的选择,都必须遵照世界观,绝对不可以脱离世界观而独立存在
 
 【已知信息（如果用不到就自然忽略）】
-- 第一层查询结果(如果有)
+- 第一层查询结果(必须)
 ${QueryResult}
 - 世界观(底层逻辑)
 ${World_Rule}

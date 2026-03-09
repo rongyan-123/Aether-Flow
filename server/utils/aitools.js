@@ -444,15 +444,18 @@ const tools = [
   },
 ];
 
-const layer1Tools = [
+const layer1Names = [
   "Query_Data",
   "Skip",
   "Query_Backpack",
   "Query_PlayerStats",
-  "Check_Breakthrough",
 ];
 
-const layer2Tools = [
+const layer1Tools = tools.filter((tool) => {
+  return layer1Names.includes(tool.function.name);
+});
+
+const layer2Names = [
   "Backpack_additems",
   "Skip",
   "Backpack_reduceitems",
@@ -460,6 +463,11 @@ const layer2Tools = [
   "PlayerStats_AddTechnique",
   "Technique_Add",
   "Generate_Plot",
+  "Check_Breakthrough",
 ];
-module.exports = { layer1Tools, layer2Tools };
-module.exports = { tools };
+
+const layer2Tools = tools.filter((tool) => {
+  return layer2Names.includes(tool.function.name);
+});
+
+module.exports = { layer1Tools, layer2Tools, tools };
