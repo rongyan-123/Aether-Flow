@@ -1,3 +1,6 @@
+const { pipeline, env } = require("chromadb-default-embed");
+env.allowRemoteModels = false;
+env.localModelPath = "D:/xiuxian/xiuxian/server/models";
 const {
   PlayerData,
   backpack,
@@ -7,10 +10,10 @@ const {
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
-
 //import { queryName } from "@/StaticData/AllData";
 //import { usePlayerStore } from "@/stores/player";
 const { layer1Tools, layer2Tools } = require("./aitools");
+const { ChromaClient } = require("chromadb");
 //chatGPT地址
 // 原 API 地址
 const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
@@ -54,6 +57,21 @@ async function chatWithAI(userInput) {
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
 
+  //rag检索准备,此处是查询函数
+  console.log("正在加载模型...");
+  const embedder = await pipeline(
+    "feature-extraction",
+    "Xenova/bge-small-zh-v1.5",
+  );
+  console.log("模型加载完成");
+  //此处是chromaDB向量数据库的服务器
+  console.log("正在加载rag向量数据库");
+  const client = new ChromaClient({ path: "http://localhost:1111" });
+  //此处是集合(修仙设定)
+  const collection = await client.getCollection({ name: "cultivation" });
+  console.log("rag向量数据库已完成");
+
+  //世界观设定
   const World_Rule = `
     // ==============================================
 // 一、核心基调（凡人流灵魂）
@@ -106,17 +124,17 @@ async function chatWithAI(userInput) {
 
 【核心任务】
 1.  分析用户的当前行为、场景、意图；
-2.  从以下维度逐一判断是否需要查询，只要有不确定的信息，就必须调用查询工具：
+2.  可以多次调用查询工具,已加入rag检索,所以建议直接查询整句话,不要拆开,然后可以多次查询,同时,请务必查询相关联的多个信息,
+  从以下维度逐一判断是否需要查询，只要有不确定的信息，就必须调用查询工具：
     - 【场景】：用户当前所在的地点、环境设定；
     - 【物品】：用户提到的所有物品的价值、品阶、用途；
     - 【规则】：当前行为涉及的修仙界规则（坊市交易、杀人夺宝、突破等）；
     - 【设定】：用户提到的所有专有名词的设定；
     - 【行为】：用户执行的某个行为,所关联的所有事物;
-3.  可以多次调用查询工具，查询多个不同的关键字,如果查询,必须拆关键字查询提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询。
-4.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
-5.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
-6.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
-7.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
+3.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
+4.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
+5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
+6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
 
 【只允许调用的工具列表】
 跳过:Skip
@@ -135,9 +153,8 @@ ${World_Rule}
 ---
 
 【注意事项（违反任何一条都视为失败）】
-1.  【如果查询,必须拆关键字查询】：提取用户行为中最核心的几个名词，不能查询整句话，不能加标点,可以多次查询；
-2.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
-3.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data,查询对应关联的事物，不能直接编造答案。
+1.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
+2.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data,查询对应关联的事物，不能直接编造答案。
 
 
 【绝对禁止】
@@ -150,11 +167,11 @@ ${World_Rule}
 ---
 ✅ 正确示范1：
 用户问题：“燃血秘术是什么？”
-你的行动：调用 Query_Data，参数 queryName=燃血秘术
+你的行动：调用 Query_Data，参数 queryName=燃血秘术是什么？
 
 ✅ 正确示范2：
 用户问题：“把燃血秘术加入我的面板”
-你的行动：调用 Query_Data，参数 queryName=燃血秘术（注意：只查询，绝对不调用添加工具）
+你的行动：调用 Query_Data，参数 queryName=把燃血秘术加入我的面板 或 queryName=燃血秘术（注意：只查询，绝对不调用添加工具）
 
 ✅ 正确示范3：
 用户问题：“我现在要做某某事情”
@@ -276,10 +293,32 @@ ${World_Rule}
         const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
         console.log("当前工具:", toolname);
         console.log("当前ai返回的参数:", toolArg);
-        // if (toolname === "Query_Data") {
-        //    console.log("当前查询:", toolArg.name);
-        //   QueryResult.push(queryName(toolArg.name));
-        // }
+
+        //rag检索
+
+        if (toolname === "Query_Data") {
+          console.log("进入rag检索工具");
+          console.log("当前查询:", toolArg.name);
+          //此处output已经拿到转为向量后的文本了
+          const output = await embedder(toolArg.name, {
+            pooling: "mean",
+            normalize: true,
+          });
+          //但是还是要转为js数组,最终这个embeddings就是要查询的向量,由于是二维,[[0.1, 0.2, ...]],所以必须加个[0]
+          const embeddings = output.tolist()[0];
+
+          const mid = await collection.query({
+            queryEmbeddings: [embeddings],
+            nResults: 3,
+          });
+          const querySetting_Result = mid.documents[0] || ["无"];
+          console.log("查询到:", querySetting_Result);
+
+          QueryResult.push(
+            `查询结果如下${JSON.stringify(querySetting_Result)}`,
+          );
+        }
+
         //查询背包和面板
         if (toolname === "Query_Backpack") {
           console.log("调用读取背包工具中....");
@@ -556,7 +595,7 @@ ${userInput}
    - 语言通俗易懂，不要使用晦涩的文言文；
    - 可适当加入修仙氛围的表述，但不要过于冗余；
    - 不要提及你是 AI，不要暴露任何非修仙世界的设定。
-   - 回答中,可适当在句子中的关键词处加上markdown语法的标记,变蓝,变红等等,让用户看得更清楚,这里你自行决定,尽量多一些,最好每一句都有一个
+   - 回答中,可适当在句子中的关键词处加上markdown语法的标记,变蓝,变红,加粗等等,让用户看得更清楚,尽量多一些,最好每一句都有一个
    - 回复尽量多分行,不要一句话写到底,要让用户拥有不错的阅读体验
 
 4. **注意事项**：
