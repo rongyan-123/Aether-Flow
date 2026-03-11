@@ -39,8 +39,8 @@ const tools = [
     },
   },
 
+  //添加物品
   {
-    //添加物品
     type: "function",
     function: {
       name: "Backpack_additems",
@@ -84,8 +84,9 @@ const tools = [
       }, //parameters括号
     },
   },
+
+  //删除物品
   {
-    //删除物品
     type: "function",
     function: {
       name: "Backpack_reduceitems",
@@ -175,6 +176,7 @@ const tools = [
       description: `这是一个修改用户基本属性的工具,请根据用户行为和选择,还有查询结果,自己思考如何修改,包括:
       当前年龄age,
       当前境界level,
+      当前声望reputation,
       当前修为numerical_cultivation,
       当前灵根spiritual_root_type,
       当前灵根等级 spiritual_root_grade,
@@ -197,8 +199,13 @@ const tools = [
             description: `当用户在炼气期时,达到对应数值就直接进阶,炼气十层,每200修为是一层,0-200是一层,200-400是二层,以此类推
               当用户在之后的境界时,同一境界内,不需要突破,比如筑基前期,中期,后期,圆满,也是直接进阶的,筑基从2000开始,10000结束,自行划分前中后期和圆满
               之后的金丹,元婴,化神,也都是你自己决定当前修为处于什么同一个大境界内的什么时期
-              如果是大境界的突破,则需要非常详细的判断是否成功
+              境界突破:根据前面查询的面板,突破工具,和用户行为,以及ai总结,决定是否更改为新的境界
               `,
+          },
+          reputation: {
+            type: "string",
+            description: `格式:无名小卒(0/1000)
+            根据前面查询的面板和用户行为,以及ai总结,决定是否更改`,
           },
           numerical_cultivation: {
             type: "number",
@@ -376,6 +383,45 @@ const tools = [
             2,然后要给用户一段较长时间的休憩,休闲剧情剧情
             3,同时为下一段剧情的开始铺垫,确保下次可以合理过渡
             `,
+          },
+        },
+      },
+    },
+  },
+
+  //生成物品
+  {
+    type: "function",
+    function: {
+      name: "Generate_Items",
+      description:
+        "这是一个生成物品的工具,根据当前场景、剧情、人物需求、环境等因素，动态生成一个符合世界观且逻辑自洽的物品，并自动存入物品数据库。生成的物品会包含名称、描述、品阶、属性、用途等信息，后续可被查询和使用。",
+      parameters: {
+        type: "string",
+        required: [],
+        properties: {
+          name: {
+            type: "string",
+            description: "物品的名字,取名请符合修仙风格,同时符合物品本身意义",
+          },
+          look: {
+            type: "string",
+            description: "物品的外貌描写,不超过30字",
+          },
+          value: {
+            type: "string",
+            description:
+              "物品的价值,单位是灵石,格式:大约XXX-XXX灵石,这里你自己填",
+          },
+          level: {
+            type: "string",
+            description:
+              "物品的等阶,共四阶,天地玄黄,天最高,黄最低,每一阶里面都分上中下三品,具体可以参考物品等阶的设定,格式:X阶X品",
+          },
+          effect: {
+            type: "string",
+            description:
+              "物品的具体信息,包括来历,用途,效果,适用条件,剧情伏笔(可选)",
           },
         },
       },

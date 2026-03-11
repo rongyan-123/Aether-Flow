@@ -362,6 +362,7 @@ ${userInput}
 增加技艺功法Technique_Add
 生成剧情Generate_Plot
 判断突破是否成功:Check_Breakthrough
+生成物品Generate_Items
 ---
 
 【强制执行规则（违反任何一条都视为失败）】
@@ -475,11 +476,6 @@ ${userInput}
 
         const toolArg = JSON.parse(tool.function.arguments); //获取ai返回的参数,此处parse是将JSON格式转为对象格式
         console.log("AI返回的完整物品数组：", toolArg.items); //检查ai返回的物品数组
-        if (toolname === "Skip") {
-          console.log("跳过执行层，原因:", toolArg.reason || "无");
-          // 什么都不用做，直接跳过
-          continue;
-        }
 
         //批量添加
         if (toolname === "Backpack_additems") {
@@ -558,6 +554,7 @@ ${userInput}
           console.log("进入跳过工具");
           console.log("ai给出原因为", toolArg.reason);
           toolResult.push("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
+          continue;
         }
 
         //突破
@@ -571,6 +568,12 @@ ${userInput}
 
           //以下是具体操作数值
           //......
+        }
+
+        //生成物品
+        if (toolname === "Generate_Items") {
+          console.log("进入生成物品工具");
+          console.log("物品名称:", toolArg.name);
         }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
