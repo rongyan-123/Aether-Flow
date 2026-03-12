@@ -44,7 +44,7 @@ async function sendHistory() {
       body: JSON.stringify({ midInput }),
     });
     const data = await response.json(); //需要await
-    console.log(data.reply);
+    console.log("最终回复为:", data.reply);
     //将对应ai回复输送到历史记录中,为下次回答做准备
     Chat.assistantadd(data.reply);
   } catch (error) {

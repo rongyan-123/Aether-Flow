@@ -12,7 +12,12 @@ const {
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
 //import { queryName } from "@/StaticData/AllData";
 //import { usePlayerStore } from "@/stores/player";
-const { layer1Tools, layer2Tools } = require("./aitools");
+const {
+  layer1Tools,
+  layer2Tools,
+  layer3Tools,
+  layer5Tools,
+} = require("./aitools");
 const { ChromaClient } = require("chromadb");
 //chatGPT地址
 // 原 API 地址
@@ -117,10 +122,34 @@ async function chatWithAI(userInput) {
 // - 仙界：修仙界最终层级，道祖为天花板，掌控天地法则。
     `;
 
-  //第一层ai提示词,仅使用工具:查询,判断突破
-  const prompt = `
+  // 新增这行，看控制台打印了几次
+  console.log(
+    "=== chatWithAI 函数被触发 ===",
+    "时间戳：",
+    new Date().getTime(),
+  );
+
+  // console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
+  // console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
+
+  // // 收集所有工具的执行结果,放在全局中使用
+  const toolResult = [];
+  //获取第一次查询结果
+  const QueryResult = [];
+  //突破情况
+  const breakthrough = [];
+  //剧情
+  let Plot = "";
+  //判断是否进入第二层生成剧情
+  let Proceed = "";
+  //🔴 1, 数据查询层
+  try {
+    console.log("🔴 1, 进入数据查询层.");
+
+    //第一层ai提示词,仅使用工具:查询,判断突破
+    const prompt = `
   【角色设定】
-你是三层架构中的第一层,【查询与思考者】,你的**职责**是：分析用户意图,和使用各种工具对用户行为进行分析,以及查询相关设定和信息,给后续的二层和三层做信息铺垫
+你是五层架构中的第一层,【查询与思考者】,你的**职责**是：分析用户意图,和使用各种工具对用户行为进行分析,以及查询相关设定和信息,给后续的二层和三层做信息铺垫
 
 【核心任务】
 1.  分析用户的当前行为、场景、意图；
@@ -135,27 +164,23 @@ async function chatWithAI(userInput) {
 4.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
 5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
 6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
+7.  注意,此处要根据用户意图和行为,判断是否进入第二层生成剧情,具体可以查看工具judgment_of_proceed描述
 
 【只允许调用的工具列表】
 跳过:Skip
 查询设定和物品描述等等:Query_Data
 查询用户背包:Query_Backpack
 查询用户面板:Query_PlayerStats
-
+是否进入第二层叙事规划层judgment_of_proceed
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
 ---
-用户原始问题：
+用户原始输入：
 ${userInput}
 
 世界观设定(底层逻辑):
 ${World_Rule}
 ---
-
-【注意事项（违反任何一条都视为失败）】
-1.  【绝对禁止修改数据】：绝对不能有任何“添加物品”“加入面板”“修改修为”的想法或行为；
-2.  【查询结果必须返回】：如果用户有任何行为，必须调用 Query_Data,查询对应关联的事物，不能直接编造答案。
-
 
 【绝对禁止】
 - 禁止有任何修改用户背包、面板数据的想法或行为；
@@ -196,41 +221,16 @@ ${World_Rule}
 
 现在，请基于以上所有规则，执行你的任务。
           `;
-  // 新增这行，看控制台打印了几次
-  console.log(
-    "=== chatWithAI 函数被触发 ===",
-    "时间戳：",
-    new Date().getTime(),
-  );
 
-  const realbackpackdata = JSON.stringify(backpack, null, 2); //转化背包内数据为字符串
-  const realPlayerdata = JSON.stringify(PlayerData, null, 2); //转化面板内数据为字符串,请注意,面板仓库里没有data,全是散的,放在state里面
-
-  //每次发送请求都会更新一次(原理是每次都用replace替换prompt里面的数据),供ai同步读取
-  const first_finalSystemPrompt = prompt.replace(
-    "backpack_DATA",
-    realbackpackdata,
-  );
-  const finalSystemPrompt2 = first_finalSystemPrompt.replace(
-    "PlayerStats_DATA",
-    realPlayerdata,
-  );
-  // console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
-  // console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
-
-  //创建最终的message
-  const messages = [
-    {
-      id: 1,
-      role: "system",
-      content: finalSystemPrompt2,
-    },
-    ...history.chatHistory,
-  ];
-
-  try {
-    //🔴 1, 数据查询层
-    console.log("🔴 1, 进入数据查询层.");
+    //创建最终的message
+    const messages = [
+      {
+        id: 1,
+        role: "system",
+        content: prompt,
+      },
+      ...history.chatHistory,
+    ];
     const Aiconfiguration = {
       //配置对象
       method: "POST",
@@ -250,12 +250,6 @@ ${World_Rule}
 
     const response = await fetch(API_URL, Aiconfiguration); //发送并收到回复
 
-    // 👇 新增：打印完整响应信息
-    console.log("=== 响应信息 ===");
-    console.log("响应状态码：", response.status);
-    console.log("响应头：", Object.fromEntries(response.headers.entries()));
-    console.log("用户问题:", userInput);
-
     const data = await response.json(); //转为json格式
 
     //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
@@ -269,20 +263,11 @@ ${World_Rule}
       data.usage.completion_tokens,
     );
     console.log("第一次发送api结束,总计消耗token:", data.usage.total_tokens);
-    const AiReply = data.choices[0].message; //拿到回复中的有效内容
+    //拿到回复中的有效内容
+    const AiReply = data.choices[0].message;
 
-    //获取深度思考
-    //const deepthink = AiReply.reasoning_content || "";
-    //获取第一次查询结果
-    const QueryResult = [];
-    console.log("ai第一次回复:", AiReply.content);
+    console.log("第一层ai回复:", AiReply.content);
     console.log("检查是否有 tool_calls：", AiReply.tool_calls);
-    //检测ai传的工具返回值
-    // console.log("以下是ai传的查询参数");
-    // for (const tool of AiReply.tool_calls) {
-    //   const toolArg = JSON.parse(tool.function.arguments);
-    //   console.log("当前查询:", toolArg.name);
-    // }
 
     //开始第一次查询
     if (AiReply.tool_calls && AiReply.tool_calls.length > 0) {
@@ -295,7 +280,6 @@ ${World_Rule}
         console.log("当前ai返回的参数:", toolArg);
 
         //rag检索
-
         if (toolname === "Query_Data") {
           console.log("进入rag检索工具");
           console.log("当前查询:", toolArg.name);
@@ -322,88 +306,427 @@ ${World_Rule}
         //查询背包和面板
         if (toolname === "Query_Backpack") {
           console.log("调用读取背包工具中....");
-          const result = query_backpack();
+          const result = query_backpack(); // 内部已经化为字符串了
           QueryResult.push(result);
         }
         if (toolname === "Query_PlayerStats") {
           console.log("调用读取面板工具中....");
-          const result = query_playerStats();
+          const result = query_playerStats(); // 内部已经化为字符串了
           QueryResult.push(result);
         }
+
+        //判断是否进入第二层,第三层
+        if (toolname === "judgment_of_proceed") {
+          console.log("是否需要进入第二层:", toolArg.judgment);
+          Proceed = toolArg.judgment;
+          console.log("Proceed:", Proceed);
+        }
+
         console.log("当前QueryResult内容:", QueryResult);
       }
       console.log("查询结束");
     }
-    console.log("🔴 2, 进入工具执行层.");
+  } catch (error) {
+    console.log("第一层出错了", error);
+    return "第一层处理失败，请稍后再试。";
+  }
 
-    const prompt2 = `
-【角色设定】:你是三层架构中的第二层【工具执行官】，你的唯一职责是：基于前一层已有的查询结果，严格从给定的工具列表中选择最合适的工具执行，绝对不能做任何超出工具范围的事。
+  //🔴 2, 叙事规划层
+  if (Proceed === "yes") {
+    try {
+      console.log("🔴 2, 进入第二层,叙事规划层.");
+      const level2_prompt = `
+      【角色设定】
+你是一位修仙世界的剧情架构师，任务是根据提供的上下文，调用Generate_Plot工具，生成一段符合起承转合结构的剧情大纲。同时,判断是否需要重新调用第三层生成对应物品和人设
+
+【输入信息】
+你将获得以下信息，必须作为生成剧情的唯一依据：
+- 用户当前状态：背包、属性、位置、任务等。
+- 最近剧情摘要（如果有）。
+- 用户本次行动意图（由前一层分析得出，如“探索”、“修炼”、“战斗”等）。
+
+【生成要求】
+1. 剧情必须包含完整的四部分：开端（Beginning）、发展（Continuation）、转折（Change）、结局（SummingUp），每部分用最精炼的语言描述核心事件，避免任何修饰和多余描述。
+2. 开端：直接点明用户当前需要但难以实现的目标，并立刻制造一个危机。
+3. 发展：用户解决危机并获得收获；为后续埋伏笔；加入一个小爽点；保持一段相对放松的节奏。
+4. 转折：引入一个更大的危机，同时回收之前的所有伏笔，并给用户新的希望。
+5. 结局：危机解除，用户变强并收获；有一段休憩时间；为未来剧情留下铺垫。
+6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
+7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
+8. 生成完剧情,判断是否需要调用judgment_of_proceed_3,进入下一层生成对应道具,人设等等,判断依据:
+
+【输出格式】
+直接调用Generate_Plot工具，将各个个部分的文字填入对应参数。无需额外解释。
+
+【用户当前数据（仅用于理解上下文，绝对不能修改）】
+---
+用户原始输入：
+${userInput}
+
+世界观设定(底层逻辑):
+${World_Rule}
+
+---
+
+【示例】
+用户输入：“我想去坊市看看有没有好东西。”
+上下文：用户修为筑基中期，背包有500灵石，当前在青云宗。
+生成的剧情可能如下：
+- Beginning：你来到坊市，听闻今晚拍卖会将出现一枚筑基丹，正是你突破所需，但价格高达1000灵石，你囊中羞涩。突然，一个黑衣修士撞了你一下，你发现自己的灵石袋不见了！
+- Continuation：你追上前去，施展身法将对方拦住，原来是个炼气期小贼。你夺回灵石，还从他身上搜出200灵石（收获）。此事传开，坊市摊主对你态度好转，愿意低价卖你一瓶聚气丹（小爽点）。你决定先买下聚气丹，再去筹集灵石。
+- Change：当你准备离开坊市时，忽然听到远处传来爆炸声，一股魔气冲天而起——有魔修在坊市内作乱！你发现那魔修正是刚才小贼的同伙，他冲你冷笑，显然认出了你（伏笔回收）。
+- SummingUp：你与魔修激战，凭借刚买的聚气丹临时提升灵力，最终将其击退（变强）。坊市管理者感谢你，奖励你500灵石，并邀请你参加明晚的拍卖会。你回到洞府休息，准备明天拍下筑基丹（休憩+铺垫）。
+- clue:出现人物:小贼,魔修,管理者等等,出现物品:管理者给予的宝物,聚气丹,出现场景:坊市,拍卖会,
+
+现在，请根据用户的最新输入和当前上下文，生成合适的剧情并调用工具。`;
+
+      const level2_messages = [
+        {
+          id: 1,
+          role: "system",
+          content: level2_prompt,
+        },
+        ...history.chatHistory,
+      ];
+      const level2_Aiconfiguration = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: LLM,
+          messages: level2_messages, //发送以下数据:历史记录,背包
+          temperature: 0.7,
+          //stream: true, //开启流式输出
+          tools: layer2Tools, //工具
+          tool_choice: "auto",
+        }),
+      };
+
+      console.log("准备第二次发送api");
+      const level2_response = await fetch(API_URL, level2_Aiconfiguration);
+
+      const level2_data = await level2_response.json(); //转为json格式
+
+      //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
+      if (!level2_response.ok) {
+        console.error("第二层 API 授权失败/请求错误：", level2_data.error);
+        return "抱歉,第二层API 请求失败（请换个模型）";
+      }
+      console.log(
+        "第二层发送api结束,输入消耗token:",
+        level2_data.usage.prompt_tokens,
+      );
+      console.log(
+        "第二层发送api结束,输出消耗token:",
+        level2_data.usage.completion_tokens,
+      );
+      console.log(
+        "第二层发送api结束,总计消耗token:",
+        level2_data.usage.total_tokens,
+      );
+      const level2_AiReply = level2_data.choices[0].message; //拿到回复中的有效内容
+      console.log("第二层Ai回复为", level2_AiReply.content);
+      console.log("第二层Ai调用工具为", level2_AiReply.tool_calls);
+
+      if (level2_AiReply.tool_calls && level2_AiReply.tool_calls.length > 0) {
+        console.log("成功进入第二层ai工具执行");
+
+        for (const tool of level2_AiReply.tool_calls) {
+          const toolname = tool.function.name;
+          const toolArg = tool.function.arguments;
+          if (toolname === "Generate_Plot") {
+            console.log("ai生成答案", toolArg);
+            const newPlot = `起:${toolArg.Beginning}\n承:\n${toolArg.Continuation}\n转:\n${toolArg.Change}\n合:\n${toolArg.SummingUp}\n其余信息:${toolArg.clue}`;
+            Plot = newPlot; // 替换为最新剧情
+            //在工具的返回中加入一个日志
+            toolResult.push(`剧情已根据用户行为更新：${Plot}`);
+          }
+        }
+      } else {
+        console.log("抱歉,第二层,没有调用工具");
+      }
+    } catch (error) {
+      console.log("第二层出现错误", error);
+      return "第二层处理失败，请稍后再试。";
+    }
+  }
+
+  //🔴 3, 动态细节层
+  if (Proceed === "yes") {
+    try {
+      console.log("🔴 3, 进入第三层,动态细节层.");
+
+      const level3_prompt = `
+      【角色】
+你是修仙世界的【细节生成器】。你的唯一任务是根据第二层生成的剧情，调用相应的工具（Generate_Items、Generate_Character、Generate_Location）来创建剧情中需要的新物品、人物和地点。
+
+【输入】
+你将获得第二层生成的完整剧情（包含开端、发展、转折、结局四个部分）。剧情中可能暗示需要新的物品、人物或地点（例如“遇到一只受伤的妖兽”、“发现一株灵草”、“进入一座废弃洞府”）。
+
+【任务】
+1. 仔细阅读剧情，识别出哪些地方需要生成新的实体（物品、人物、地点）。
+2. 为每个需要生成的实体调用对应的工具，一次调用只生成一个实体。可多次调用。
+3. 在调用工具时，必须根据剧情上下文填写参数，确保生成的实体与剧情一致，并相互绑定：
+   - **物品**：指定其主人（owner）、所在地（location）及可能的剧情伏笔（plot_hint）。
+   - **人物**：指定其所在地（location）、所属势力（affiliation）、拥有的物品（items）。
+   - **地点**：指定其居民（inhabitants）、特有物品（bound_items）、关联地点（bound_locations）。
+4. 所有描述务必简洁，避免浪费token，只需填写必要信息。
+
+【输出】
+直接调用工具，不要输出任何其他内容。
+
+【示例】
+若剧情中提到“你在坊市遇到一位神秘老者，他手中拿着一枚古朴丹药”，则应调用：
+- Generate_Character：生成老者，设定其 location 为“坊市”，可能拥有物品 items: ["古朴丹药"]。
+- Generate_Items：生成丹药，设定其 owner 为老者，location 为“坊市”，并赋予 effect 等属性。
+
+现在，基于以下剧情执行任务：
+${Plot}`;
+      const level3_messages = [
+        {
+          id: 1,
+          role: "system",
+          content: level3_prompt,
+        },
+        ...history.chatHistory,
+      ];
+      const level3_Aiconfiguration = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: LLM,
+          messages: level3_messages, //发送以下数据:历史记录,背包
+          temperature: 0.7,
+          //stream: true, //开启流式输出
+          tools: layer3Tools, //工具
+          tool_choice: "auto",
+        }),
+      };
+
+      console.log("第三层,准备发送api");
+      const level3_response = await fetch(API_URL, level3_Aiconfiguration);
+
+      const level3_data = await level3_response.json(); //转为json格式
+
+      //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
+      if (!level3_response.ok) {
+        console.error("第三层 API 授权失败/请求错误：", level3_data.error);
+        return "抱歉,第三层API 请求失败（请换个模型）";
+      }
+      console.log(
+        "第三层发送api结束,输入消耗token:",
+        level3_data.usage.prompt_tokens,
+      );
+      console.log(
+        "第三层发送api结束,输出消耗token:",
+        level3_data.usage.completion_tokens,
+      );
+      console.log(
+        "第三层发送api结束,总计消耗token:",
+        level3_data.usage.total_tokens,
+      );
+      const level3_AiReply = level3_data.choices[0].message; //拿到回复中的有效内容
+      console.log("第三层Ai回复为", level3_AiReply.content);
+      console.log("第三层Ai调用工具为", level3_AiReply.tool_calls);
+
+      if (level3_AiReply.tool_calls && level3_AiReply.tool_calls.length > 0) {
+        console.log("成功进入第三层ai工具执行");
+
+        for (const tool of level3_AiReply.tool_calls) {
+          const toolname = tool.function.name;
+          const toolArg = tool.function.arguments;
+          if (toolname === "Generate_Character") {
+            console.log("ai生成答案", toolArg);
+            const newPlot = `起:${toolArg.Beginning}\n承:\n${toolArg.Continuation}\n转:\n${toolArg.Change}\n合:\n${toolArg.SummingUp}\n其余信息:${toolArg.clue}`;
+            Plot = newPlot; // 替换为最新剧情
+            //在工具的返回中加入一个日志
+            toolResult.push(`剧情已根据用户行为更新：${Plot}`);
+          }
+        }
+      } else {
+        console.log("抱歉,第三层,没有调用工具");
+      }
+    } catch (error) {
+      console.log("第三层出错了", error);
+      return "第三层处理失败，请稍后再试。";
+    }
+  }
+
+  //拿到第四层ai回复文本
+  let level4_Replay = "";
+  //🔴 4, 进入面向用户层
+  try {
+    const level4_prompt = `
+    【角色】
+你是修仙世界的【因果推演师】。你的职责是根据以下所有信息，推演用户行为的结果，并用最简洁的语言描述发生了什么，以及用户的状态（背包、面板等）发生了哪些变化。
+
+【输入】
+你将获得以下信息：
+- **用户原始请求**：${userInput}
+- **第一层查询结果**：${QueryResult}
+- **第二层生成的剧情框架**：${Plot}（包含起承转合）
+- **第三层生成的实体**：${{}}（物品、人设、地点的摘要列表，包含名称、所属、位置等）
+- **当前世界状态**：用户背包{{backpack}}、面板{{player}}、所在位置{{location}}等
+- **世界观底层逻辑**：${World_Rule}（参考用）
+
+【任务】
+1. **推演行为结果**：根据用户意图、剧情框架和当前状态，推演用户执行该行为后会发生什么。例如：
+   - 若用户战斗，则推演胜负、受伤程度、消耗物品、获得战利品等。
+   - 若用户探索，则推演发现新地点、遭遇事件、获得物品等。
+   - 若用户修炼，则推演修为增长、突破可能、消耗灵石等。
+2. **整合信息**：结合第三层生成的实体，判断哪些会被触发、使用或改变。
+3. **输出一段简洁的描述**：用一两句话说明发生了什么，并明确指出用户状态的变化（如“修为+100，灵石-50，获得丹药一枚”）。描述要清晰，便于后续层理解并执行实际修改。
+
+【规则】
+- **必须基于输入信息**，不得凭空编造。
+- **确保推演符合世界观**。
+- **语言极其简洁**，避免任何修饰，只陈述事实和变化。
+- **不调用工具**，只输出文本。
+
+【示例】
+用户请求：“我要击杀那个魔修。”
+输入：用户修为筑基中期，背包有“飞剑”，剧情框架为“遇到魔修挑衅”，第三层生成了“魔修（金丹初期）”和“魔窟地点”。
+输出：
+你与金丹初期的魔修激战，不敌受伤，魔修遁入魔窟。你的灵力因战斗消耗减少50点。功法XXX获得了10点熟练度
+
+  (注意,需要注意的参数请根据用户面板而输出对应数值) `;
+
+    //创建messages
+    const level4_messages = [
+      {
+        id: 1,
+        role: "system",
+        content: level4_prompt,
+      },
+      ...history.chatHistory,
+    ];
+    const Aiconfiguration = {
+      //配置对象
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: LLM,
+        messages: level4_messages, //发送以下数据:历史记录,背包
+        temperature: 0.7,
+        //stream: true, //开启流式输出
+        // tools: layer4Tools, //工具
+        // tool_choice: "auto",
+      }),
+    };
+    const level4_response = await fetch(API_URL, Aiconfiguration); //发送并收到回复
+
+    const level4_data = await level4_response.json(); //转为json格式
+    //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
+    if (!level4_response.ok) {
+      console.error("API 授权失败/请求错误：", level4_data.error);
+      return "抱歉，API 请求失败（请换个模型）";
+    }
+    console.log(
+      "第4次发送api结束,输入消耗token:",
+      level4_data.usage.prompt_tokens,
+    );
+    console.log(
+      "第4次发送api结束,输出消耗token:",
+      level4_data.usage.completion_tokens,
+    );
+    console.log(
+      "第4次发送api结束,总计消耗token:",
+      level4_data.usage.total_tokens,
+    );
+    //拿到回复中的有效内容
+    const AiReply = level4_data.choices[0].message;
+
+    console.log("第4层ai回复:", AiReply.content);
+    console.log("检查是否有 tool_calls：", AiReply.tool_calls);
+    level4_Replay = AiReply.content;
+  } catch (error) {
+    console.log("第五层出错了", error);
+    return "第五层处理失败，请稍后再试。";
+  }
+
+  //🔴 5, 工具执行层
+  try {
+    console.log("🔴 5, 进入工具执行层.");
+
+    const level5_prompt = `
+【角色设定】:你是五层架构中的第五层【最终执行者】。你的唯一职责是：基于第四层推演出的结果，严格从给定的工具列表中选择最合适的工具执行，并根据所有信息生成最终的自然语言回复。
 
 【核心任务】
-1.  仔细阅读下方的【查询结果】【用户原始问题】【可用工具列表】；
-2.  严格基于【查询结果】，判断用户的需求是什么；
-3.  从【可用工具列表】中选择**唯一最合适**的工具执行；
-4.  如果实在没有工具使用,那就跳过，就调用【Skip】工具。
+1.  仔细阅读下方的【第四层推演结果】【用户原始问题】【第一层查询结果】【可用工具列表】；
+2.  从【第四层推演结果】中解析出需要修改的数据变化（如背包物品增减、面板属性变化、学习功法技艺、突破结果等）；
+3.  根据解析出的变化，从【可用工具列表】中选择对应的工具执行（可能需要多次调用，例如同时添加物品和修改修为）；
+4.  调用完所有必要工具后，根据推演结果、查询结果、工具执行情况等，生成一段符合修仙风格的最终回复，回复给用户。
 
 【输入上下文】
 ---
-【1. 查询结果（来自第一次API调用，你必须100%基于此判断，绝对不能编造）】
-${QueryResult}
+【1. 第四层推演结果】
+${level4_Replay}
 ---
 【2. 用户原始问题】
 ${userInput}
 ---
-【3. 可用工具列表】
-添加物品Backpack_additems
-删除物品Backpack_reduceitems
-跳过工具Skip
-修改面板属性Player_changeAttribute
-增加所会的功法PlayerStats_AddTechnique
-增加技艺功法Technique_Add
-生成剧情Generate_Plot
-判断突破是否成功:Check_Breakthrough
-生成物品Generate_Items
+【3. 第一层查询结果】
+${QueryResult}
+---
+【4. 可用工具列表】
+添加物品: Backpack_additems
+删除物品: Backpack_reduceitems
+跳过工具: Skip
+修改面板属性: Player_changeAttribute
+增加所会的功法: PlayerStats_AddTechnique
+增加技艺: Technique_Add
+判断突破是否成功: Check_Breakthrough
+生成物品: Generate_Items
 ---
 
-【强制执行规则（违反任何一条都视为失败）】
-1.  【必须基于查询结果】：所有判断必须100%来自【查询结果】；
-2.  【参数必须来自查询结果】：工具的所有参数必须优先从【查询结果】里提取；
-3.  【需要跳过就调用Skip】：如果用户的需求只是查询信息，或者查询结果里没有相关信息，就调用【Skip】工具。
+【强制执行规则】
+1.  【必须基于第四层推演结果】：所有需要修改的数据必须来自推演结果，不得凭空编造；
+2.  【参数准确】：调用工具时，参数要准确对应推演结果中描述的变化（如物品名称、数量、属性值等）；
+3.  【多次调用】：如果推演结果涉及多个变化，需依次调用对应工具，不要合并或遗漏；
+4.  【最后生成回复】：调用完所有工具后，必须生成一段最终回复，回复给用户；
+5.  【回复风格】：
+    - 称呼用户为「道友」；
+    - 语言通俗易懂，适当加入修仙氛围；
+    - 可适当在关键词处使用markdown标记（如**加粗**、高亮），增强可读性；
+    - 不要暴露任何技术术语（如“工具”、“调用”、“函数”等）；
+    - 回复应简洁自然，避免冗余。
 
 【绝对禁止】
-- 禁止编造【查询结果】里没有的信息；
-- 禁止选择【可用工具列表】里没有的工具；
-- 禁止跨工具调用（功法/战技/物品必须严格区分）；
-- 禁止在这一层直接回复用户，必须调用工具。
+- 禁止在推演结果没有指明的情况下修改数据；
+- 禁止选择不在列表中的工具；
+- 禁止不生成回复。
 
-【正反例子】
----
-✅ 正确示范1：
-【查询结果】：燃血秘术是其他法门，黄阶上品
-【用户问题】：把燃血秘术加入我的面板
-你的行动：调用 Technique_Add 工具
+【示例(只是参考,希望你自行优化)】
+第四层推演结果：你与金丹初期的魔修激战，不敌受伤，魔修遁入魔窟。你的灵力因战斗消耗减少50点。
+用户原始问题：我要击杀那个魔修。
+你的行动：
+- 调用 Backpack_reduceitems，参数：items: [{ name: "飞剑", value: 500, mount: 1 }]
+- 调用 Player_changeAttribute，参数：: spiritual_power -50
+最终回复：道友，你与那金丹初期的魔修一场激战，虽奋力拼杀，奈何境界悬殊，最终不敌受伤。你的**飞剑**在战斗中受损，灵力也因消耗而跌落**50点**。那魔修遁入魔窟，你需从长计议。
 
-✅ 正确示范2：
-【查询结果】：练气篇引导决是修炼功法，黄阶下品
-【用户问题】：给我介绍一下练气篇引导决
-你的行动：调用 Skip 工具，参数 reason="用户只是查询信息，不需要修改数据"
----
-
-现在，请基于以上所有规则，执行你的任务。
+现在，请基于以上规则，根据实际输入执行任务。
 `;
 
-    console.log("当前历史记录已经有:", history);
+    // console.log("当前历史记录已经有:", history);
 
     //新message2
-    const messages2 = [
+    const level5_messages = [
       {
         id: 1,
         role: "system",
-        content: prompt2,
+        content: level5_prompt,
       },
       ...history.chatHistory,
     ];
-    const Aiconfiguration2 = {
+    const Aiconfiguration = {
       //配置对象
       method: "POST",
       headers: {
@@ -424,40 +747,36 @@ ${userInput}
         //deepseek-r1   (一天30次)
 
         model: LLM,
-        messages: messages2, //发送以下数据:历史记录,背包
+        messages: level5_messages, //发送以下数据:历史记录,背包
         temperature: 0.7,
         //stream: true, //开启流式输出
-        tools: layer2Tools, //工具
+        tools: layer5Tools, //工具
         tool_choice: "auto", //自动选择调用,注意这里tool没有s的
       }),
     };
     //第二次发送
-    console.log("第二次发送api");
-    const response2 = await fetch(API_URL, Aiconfiguration2);
-    const data2 = await response2.json();
-    console.log("第二次API完整响应:", JSON.stringify(data2, null, 2)); // 先打印，看实际返回
-    if (!data2.choices || data2.choices.length === 0) {
-      console.error("第二次API返回异常，没有choices:", data2);
-      // 这里可以返回一个友好的错误信息，或者尝试使用 Skip 的 fallback
-      return "抱歉，玄机子暂时无法回应，请稍后再试。";
-    }
+    console.log("第五次发送api");
+    const response2 = await fetch(API_URL, Aiconfiguration);
+    const level5_data = await response2.json();
 
-    const AiReply2 = data2.choices[0].message; // 包含所有回复和工具使用情况
-    console.log("第二次发送api结束,输入消耗token:", data2.usage.prompt_tokens);
+    console.log("第5次API完整响应:", JSON.stringify(level5_data, null, 2)); // 先打印，看实际返回
+
+    const AiReply2 = level5_data.choices[0].message; // 包含所有回复和工具使用情况
+    console.log("第5层ai回复:", AiReply2.content);
+    console.log("检查是否有 tool_calls：", AiReply2.tool_calls);
     console.log(
-      "第二次发送api结束,输出消耗token:",
-      data2.usage.completion_tokens,
+      "第5次发送api结束,输入消耗token:",
+      level5_data.usage.prompt_tokens,
     );
-    console.log("第二次发送api结束,总计消耗token:", data2.usage.total_tokens);
+    console.log(
+      "第5次发送api结束,输出消耗token:",
+      level5_data.usage.completion_tokens,
+    );
+    console.log(
+      "第5次发送api结束,总计消耗token:",
+      level5_data.usage.total_tokens,
+    );
 
-    // // 收集所有工具的执行结果,放在全局中使用
-    const toolResult = [];
-
-    //剧情
-    const Plot = [];
-
-    //突破情况
-    const breakthrough = [];
     //====================== 解析工具 ==============================================
     //循环遍历ai使用的所有工具, 注意这里的tool是没有s的
     if (AiReply2.tool_calls && AiReply2.tool_calls.length > 0) {
@@ -579,113 +898,11 @@ ${userInput}
       console.log("工具执行结束,一共使用工具次数:", count);
       console.log("toolResult==", toolResult);
     }
-
-    //🔴 3, 进入面向用户层
-
-    const prompt3 = `
-    你是修仙世界中精通推演与答疑的【玄机子】。
-【绝对核心规则（违反即重写）】
-1. **唯一任务**：仅根据下方提供的信息,以及工具的回复,查询的结果,总结并生成一段自然流畅的修仙风格回复；
-2. **绝对禁止**： 
-   - 禁止出现任何代码、JSON、工具调用、API、函数、参数等技术词汇；
-   - 禁止提及“工具”“系统”“调用”“执行”等相关概念；
-   - 禁止编造任何下方输入中没有的信息；
-   - 禁止主动要求用户提供额外信息（除非明确提示信息不全）；
-   - 禁止修改和创造任意新内容,此处仅总结信息;
-   - 禁止为了语句流畅、篇幅简短，省略、精简原文中的任何细节内容。
-3. **回复风格**：
-   - 称呼用户为「道友」；
-   - 语言通俗易懂，不要使用晦涩的文言文；
-   - 可适当加入修仙氛围的表述，但不要过于冗余；
-   - 不要提及你是 AI，不要暴露任何非修仙世界的设定。
-   - 回答中,可适当在句子中的关键词处加上markdown语法的标记,变蓝,变红,加粗等等,让用户看得更清楚,尽量多一些,最好每一句都有一个
-   - 回复尽量多分行,不要一句话写到底,要让用户拥有不错的阅读体验
-
-4. **注意事项**：
-   - 如果有查询设定等操作,绝对要把设定尽量转述,不要遗漏任何内容
-   - 剧情的发展必须要参考,同时也需要结合查询结果,工具返回结果,背包,个人面板等等信息,将剧情的bug进行修改,比如名字对不上(你就改为用户的名字),物品没有在数据库中出现(换一个物品)等等,所有bug和不合理的地方都要修改,然后告知用户发生了什么,剧情不要一口气给用户,而是任何一个选择,都要让用户进行
-   - 以上所有回复,生成内容,修改后的剧情,剧情中人物行动逻辑,包括用户自己的选择,都必须遵照世界观,绝对不可以脱离世界观而独立存在
-
-【已知信息（如果用不到就自然忽略）】
-- 第一层查询结果(必须)
-${QueryResult}
-- 世界观(底层逻辑)
-${World_Rule}
-- 用户突破结果(如果有)
-${breakthrough}
-
-【必须读取和总结,回复的信息】
-- 用户原始请求(精准回复)：{{USER_QUESTION}}
-- 工具返回的结果(必须读取)：{{TOOL_RESULT}}
-- 必须遵循的剧情发展(如果有):${Plot}
-
-请直接生成你的回复：`;
-
-    //把工具回复放到message2里面,准备再次发送给ai
-    const toolResultStr = toolResult.join("\n\n");
-
-    // ✅ 链式调用 replace，一口气搞定，不用写 finalSystemPrompt1/2/3/4/5
-    const finalSystemPrompt = prompt3
-      .replace("USER_QUESTION", userInput)
-      .replace("TOOL_RESULT", toolResultStr);
-
-    //创建第3个messages
-    const messages3 = [
-      {
-        id: 1,
-        role: "system",
-        content: finalSystemPrompt,
-      },
-      ...history.chatHistory,
-    ];
-    if (data2.choices && data2.choices.length > 0) {
-      //防御性编程
-      console.log("🔴 3, 进入面向用户层.");
-
-      //2.0,多轮工具对话
-      const Aiconfiguration3 = {
-        //配置对象
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify({
-          //这里还是不建议用deepseek-r1 ,它不会fc,回答会丢一堆代码
-          model: LLM,
-          messages: messages3, //发送以下数据:新提示词,历史记录,背包,ai第一次回复,工具回复
-          temperature: 0.7,
-          //stream: true, //开启流式输出
-        }),
-      };
-      //第三次发送给ai
-      const response3 = await fetch(API_URL, Aiconfiguration3); //发送并收到回复
-      const data3 = await response3.json(); //转为json格式
-      console.log(
-        "第三次发送api结束,输入消耗token:",
-        data3.usage.prompt_tokens,
-      );
-      console.log(
-        "第三次发送api结束,输出消耗token:",
-        data3.usage.completion_tokens,
-      );
-      console.log("第三次发送api结束,总计消耗token:", data3.usage.total_tokens);
-      const AiReply3 = data3.choices[0].message; //拿到回复中的有效内容
-      //判断 response3.ok，先检查请求是否成功（比如 401 能提前发现）
-      if (!response3.ok) {
-        console.error("API 授权失败/请求错误：", data.error);
-        return "抱歉，API 请求失败（请换个模型）";
-      }
-
-      console.log("ai最终回复:", AiReply3.content);
-      return AiReply3.content;
-    } else {
-      console.error("响应异常", data);
-      return "抱歉,ai出错";
-    }
   } catch (error) {
-    console.error("出错了!!!", error);
+    console.log("第四层出现错误", error);
+    return "第四层处理失败，请稍后再试。";
   }
+  return level4_Replay;
 }
 
 module.exports = { chatWithAI };

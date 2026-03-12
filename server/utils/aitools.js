@@ -146,6 +146,7 @@ const tools = [
       },
     },
   },
+
   //跳过工具
   {
     type: "function",
@@ -350,7 +351,7 @@ const tools = [
         "这是一个生成剧情的工具,要求符合起承转合的节奏,同时如果用户的选择会影响剧情发展走向,则必须重新修改剧情,调用此工具,根据用户的选择,修改剧情使其合理",
       parameters: {
         type: "object",
-        required: ["Beginning", "Continuation", "Change", "SummingUp"],
+        required: ["Beginning", "Continuation", "Change", "SummingUp", "clue"],
         properties: {
           Beginning: {
             type: "string",
@@ -384,6 +385,10 @@ const tools = [
             3,同时为下一段剧情的开始铺垫,确保下次可以合理过渡
             `,
           },
+          clue: {
+            type: "string",
+            description: `一个对后续可能出现的事物的解释,可以在这里提到后续需要生成的物品,人设,场景等等,为后续生成做铺垫`,
+          },
         },
       },
     },
@@ -395,33 +400,173 @@ const tools = [
     function: {
       name: "Generate_Items",
       description:
-        "这是一个生成物品的工具,根据当前场景、剧情、人物需求、环境等因素，动态生成一个符合世界观且逻辑自洽的物品，并自动存入物品数据库。生成的物品会包含名称、描述、品阶、属性、用途等信息，后续可被查询和使用。",
+        "根据场景、剧情、需求等生成一件修仙物品，并绑定到对应的人物、地点或势力。语言简洁，避免浪费token。",
       parameters: {
-        type: "string",
-        required: [],
+        type: "object",
+        required: ["name", "look", "value", "level", "effect"],
         properties: {
           name: {
             type: "string",
-            description: "物品的名字,取名请符合修仙风格,同时符合物品本身意义",
+            description: "物品名称，修仙风格，符合物品特性。",
           },
           look: {
             type: "string",
-            description: "物品的外貌描写,不超过30字",
+            description: "外貌描写，不超过30字。",
           },
           value: {
             type: "string",
-            description:
-              "物品的价值,单位是灵石,格式:大约XXX-XXX灵石,这里你自己填",
+            description: "价值（灵石），格式：大约XXX-XXX灵石。",
           },
           level: {
             type: "string",
-            description:
-              "物品的等阶,共四阶,天地玄黄,天最高,黄最低,每一阶里面都分上中下三品,具体可以参考物品等阶的设定,格式:X阶X品",
+            description: "品阶，格式：X阶X品（参考天地玄黄设定）。",
           },
           effect: {
             type: "string",
+            description: "来历、用途、效果、适用条件，可含剧情伏笔。",
+          },
+          // 绑定字段（可选，但推荐关联）
+          owner: {
+            type: "string",
             description:
-              "物品的具体信息,包括来历,用途,效果,适用条件,剧情伏笔(可选)",
+              "物品当前所有者（人物名或势力名），若无人持有则填“无主”。",
+          },
+          location: {
+            type: "string",
+            description: "物品所在区域（如地图名、宗门、洞府等）。",
+          },
+          plot_hint: {
+            type: "string",
+            description: "与剧情相关的伏笔或用途（可选）。",
+          },
+        },
+      },
+    },
+  },
+
+  //生成人设
+  {
+    type: "function",
+    function: {
+      name: "Generate_Character",
+      description:
+        "根据剧情生成一位修仙人物，绑定其背景、势力、所在地及关联物品。语言简洁，避免浪费token。",
+      parameters: {
+        type: "object",
+        required: [
+          "name",
+          "background",
+          "personality",
+          "combat_power",
+          "status",
+          "goal",
+        ],
+        properties: {
+          name: {
+            type: "string",
+            description: "姓名，古风，符合性格特质。",
+          },
+          background: {
+            type: "string",
+            description: "家庭背景、过往历史，简洁且关联性格和行为逻辑。",
+          },
+          personality: {
+            type: "string",
+            description: "性格特质，几句话概括，关联背景。",
+          },
+          combat_power: {
+            type: "string",
+            description:
+              "战力综合（境界、功法、技艺、武器等），简洁且符合身份。",
+          },
+          status: {
+            type: "string",
+            description: "身份地位，所属势力（如XX宗门掌门、散修等）。",
+          },
+          goal: {
+            type: "string",
+            description: "当前目标，服务剧情，关联性格经历。",
+          },
+          // 绑定字段
+          location: {
+            type: "string",
+            description: "常驻地或当前所在区域（地图名）。",
+          },
+          affiliation: {
+            type: "string",
+            description: "所属势力（宗门、家族等）。",
+          },
+          items: {
+            type: "array",
+            items: { type: "string" },
+            description: "随身携带或拥有的重要物品名称列表（可选）。",
+          },
+        },
+      },
+    },
+  },
+
+  //生成地图
+  {
+    type: "function",
+    function: {
+      name: "Generate_Location",
+      description:
+        "根据剧情生成一个修仙世界的地点（如宗门、秘境、城池等），绑定其势力、居民、规则及关联物品/人物。语言简洁。",
+      parameters: {
+        type: "object",
+        required: ["name", "region", "danger_level", "description"],
+        properties: {
+          name: {
+            type: "string",
+            description: "地点名称，修仙风格。",
+          },
+          region: {
+            type: "string",
+            description: "所在大陆或大区域（如天南、乱星海）。",
+          },
+          danger_level: {
+            type: "string",
+            enum: ["安全", "低危", "中危", "高危", "绝地"],
+            description: "危险等级。",
+          },
+          description: {
+            type: "string",
+            description: "简要描述，包括环境、氛围、特征（不超过50字）。",
+          },
+          // 详细属性
+          势力分布: {
+            type: "string",
+            description: "主要势力（宗门、家族、魔修等）及关系。",
+          },
+          战力范围: {
+            type: "string",
+            description: "此地常见修士的境界范围（如炼气～元婴）。",
+          },
+          规则: {
+            type: "string",
+            description: "特殊规则（如禁止斗法、魔气弥漫等）。",
+          },
+          和平状态: {
+            type: "string",
+            enum: ["和平", "冲突", "战争", "混乱"],
+            description: "当前局势。",
+          },
+          // 绑定字段
+          inhabitants: {
+            type: "array",
+            items: { type: "string" },
+            description: "常驻或关键人物名称列表。",
+          },
+          bound_items: {
+            type: "array",
+            items: { type: "string" },
+            description: "此地特有的重要物品名称列表（如镇宗之宝）。",
+          },
+          bound_locations: {
+            type: "array",
+            items: { type: "string" },
+            description: "包含的子区域或关联地点（如秘境入口）。",
           },
         },
       },
@@ -488,6 +633,47 @@ const tools = [
       },
     },
   },
+
+  //是否进入第二层叙事规划层判断
+  {
+    type: "function",
+    function: {
+      name: "judgment_of_proceed_2",
+      description:
+        "此工具用于在第一层进行判断,看看是否需要生成,修改剧情,当用户的意图中拥有主动的行为时,影响了剧情时,才需要调用此工具,说明需要进入第二层,如果用户只是询问和聊天,则不需要调用此工具",
+      parameters: {
+        type: "object",
+        required: ["judgment"],
+        properties: {
+          judgment: {
+            type: "string",
+            enum: ["yes"],
+          },
+        },
+      },
+    },
+  },
+
+  //是否进入第三层动态细节层判断
+  {
+    type: "function",
+    function: {
+      name: "judgment_of_proceed_3",
+      description:
+        "此工具用于在第二层进行判断,看看是否需要生成,修改剧情,当用户的意图中拥有主动的行为时,影响了剧情时,才需要调用此工具,说明需要进入第二层,如果用户只是询问和聊天,则不需要调用此工具",
+      parameters: {
+        type: "object",
+        required: ["judgment"],
+        properties: {
+          judgment: {
+            type: "string",
+            enum: ["yes"],
+          },
+        },
+      },
+    },
+  },
+  ///
 ];
 
 const layer1Names = [
@@ -495,25 +681,43 @@ const layer1Names = [
   "Skip",
   "Query_Backpack",
   "Query_PlayerStats",
+  "judgment_of_proceed_2",
 ];
 
 const layer1Tools = tools.filter((tool) => {
   return layer1Names.includes(tool.function.name);
 });
 
-const layer2Names = [
+//第二层工具
+const layer2Names = ["Generate_Plot", "judgment_of_proceed_3"];
+
+const layer2Tools = tools.filter((tool) => {
+  return layer2Names.includes(tool.function.name);
+});
+
+//第三层工具
+const layer3Names = [
+  "Generate_Character",
+  "Generate_Items",
+  "Generate_Location",
+];
+
+const layer3Tools = tools.filter((tool) => {
+  return layer3Names.includes(tool.function.name);
+});
+
+const layer5Names = [
   "Backpack_additems",
   "Skip",
   "Backpack_reduceitems",
   "Player_changeAttribute",
   "PlayerStats_AddTechnique",
   "Technique_Add",
-  "Generate_Plot",
   "Check_Breakthrough",
 ];
 
-const layer2Tools = tools.filter((tool) => {
-  return layer2Names.includes(tool.function.name);
+const layer5Tools = tools.filter((tool) => {
+  return layer5Names.includes(tool.function.name);
 });
 
-module.exports = { layer1Tools, layer2Tools, tools };
+module.exports = { layer1Tools, layer2Tools, layer3Tools, layer5Tools, tools };
