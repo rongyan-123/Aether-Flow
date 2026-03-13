@@ -2,11 +2,13 @@ const { pipeline, env } = require("chromadb-default-embed");
 env.allowRemoteModels = false;
 env.localModelPath = "D:/xiuxian/xiuxian/server/models";
 const {
-  PlayerData,
-  backpack,
   history,
   query_backpack,
   query_playerStats,
+  addItem,
+  reduceItem,
+  add_Cultivation_Technique,
+  add_Technique,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
@@ -165,6 +167,7 @@ async function chatWithAI(userInput) {
 5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
 6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
 7.  注意,此处要根据用户意图和行为,判断是否进入第二层生成剧情,具体可以查看工具judgment_of_proceed描述
+8.  如果历史记录为空,建议调用judgment_of_proceed工具生成开头剧情
 
 【只允许调用的工具列表】
 跳过:Skip
@@ -316,7 +319,7 @@ ${World_Rule}
         }
 
         //判断是否进入第二层,第三层
-        if (toolname === "judgment_of_proceed") {
+        if (toolname === "judgment_of_proceed_2") {
           console.log("是否需要进入第二层:", toolArg.judgment);
           Proceed = toolArg.judgment;
           console.log("Proceed:", Proceed);
@@ -354,6 +357,12 @@ ${World_Rule}
 6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
 7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
 8. 生成完剧情,判断是否需要调用judgment_of_proceed_3,进入下一层生成对应道具,人设等等,判断依据:
+
+【逻辑铁则】
+- 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
+- 重大事件（如金丹期修士获胜、邀请主角）必须有合理铺垫或动机。
+- 战斗结果必须基于实力对比，不能出现以弱胜强（除非有特殊法宝或机缘，需在剧情中明确说明）。
+- 人物动机要清晰，不能无缘无故做出不合常理的行为。
 
 【输出格式】
 直接调用Generate_Plot工具，将各个个部分的文字填入对应参数。无需额外解释。
@@ -435,7 +444,7 @@ ${World_Rule}
 
         for (const tool of level2_AiReply.tool_calls) {
           const toolname = tool.function.name;
-          const toolArg = tool.function.arguments;
+          const toolArg = JSON.parse(tool.function.arguments);
           if (toolname === "Generate_Plot") {
             console.log("ai生成答案", toolArg);
             const newPlot = `起:${toolArg.Beginning}\n承:\n${toolArg.Continuation}\n转:\n${toolArg.Change}\n合:\n${toolArg.SummingUp}\n其余信息:${toolArg.clue}`;
@@ -537,15 +546,147 @@ ${Plot}`;
       if (level3_AiReply.tool_calls && level3_AiReply.tool_calls.length > 0) {
         console.log("成功进入第三层ai工具执行");
 
+        //开始遍历工具
         for (const tool of level3_AiReply.tool_calls) {
           const toolname = tool.function.name;
-          const toolArg = tool.function.arguments;
+          const toolArg = JSON.parse(tool.function.arguments);
+          // console.log("生成前检查集合");
+          // console.log("collection:", collection);
+
+          //生成人设
           if (toolname === "Generate_Character") {
-            console.log("ai生成答案", toolArg);
-            const newPlot = `起:${toolArg.Beginning}\n承:\n${toolArg.Continuation}\n转:\n${toolArg.Change}\n合:\n${toolArg.SummingUp}\n其余信息:${toolArg.clue}`;
-            Plot = newPlot; // 替换为最新剧情
+            console.log("进入生成人设工具");
+            console.log("ai生成结果为:", toolArg);
+            const level3_description = `名字:\n${toolArg.name}\n外貌:\n${toolArg.look}\n
+            背景和过往历史:\n${toolArg.background}\n
+            性格特质:\n${toolArg.personality}\n战力:\n${toolArg.combat_power}\n
+            身份:\n${toolArg.status}\n目标:\n${toolArg.goal}\n常驻地或当前所在区域（地图名）:\n${toolArg.location}
+            所属势力:\n${toolArg.affiliation}\n随身携带或拥有的重要物品名称列表:\n${toolArg.items}\n`;
+            const Character = {
+              id: `character_${Date.now()}`,
+              name: toolArg.name,
+              description: level3_description,
+              metadata: {
+                combat_power: toolArg.combat_power,
+                location: toolArg.location,
+                affiliation: toolArg.affiliation,
+              },
+            };
+
+            //生成向量
+            const vector = (
+              await embedder(Character.description, {
+                pooling: "mean",
+                normalize: true,
+              })
+            ).tolist()[0];
+            console.log("成功生成向量");
+
+            await collection.add({
+              ids: [Character.id],
+              embeddings: [vector],
+              metadatas: [Character.metadata],
+              documents: [Character.description],
+            });
+            console.log("成功放入向量数据库");
+
+            console.log("此为ai生成的人设:", level3_description);
+
             //在工具的返回中加入一个日志
-            toolResult.push(`剧情已根据用户行为更新：${Plot}`);
+            toolResult.push(`第三层,已生成新角色：${level3_description}`);
+          }
+
+          //生成物品
+          if (toolname === "Generate_Items") {
+            console.log("进入生成物品工具");
+            console.log("ai生成结果为:", toolArg);
+            const level3_description = `物品名称:\n${toolArg.name}\n物品外貌描写:\n${toolArg.look}\n
+            价值:\n${toolArg.value}\n品阶:\n${toolArg.level}\n
+            来历、用途、效果、适用条件，可含剧情伏笔:\n${toolArg.effect}\n
+            物品当前所有者:\n${toolArg.owner}\n物品所在区域（地图名）:\n${toolArg.location}
+            与剧情相关的伏笔或用途:\n${toolArg.plot_hint}\n`;
+            const Item = {
+              id: `Item_${Date.now()}`,
+              name: toolArg.name,
+              description: level3_description,
+              metadata: {
+                owner: toolArg.owner,
+                location: toolArg.location,
+                plot_hint: toolArg.plot_hint,
+              },
+            };
+
+            //生成向量
+            const vector = (
+              await embedder(Item.description, {
+                pooling: "mean",
+                normalize: true,
+              })
+            ).tolist()[0];
+            console.log("成功生成向量");
+
+            await collection.add({
+              ids: [Item.id],
+              embeddings: [vector],
+              metadatas: [Item.metadata],
+              documents: [Item.description],
+            });
+            console.log("成功放入向量数据库");
+
+            console.log("此为ai生成的物品:", level3_description);
+
+            //在工具的返回中加入一个日志
+            toolResult.push(`第三层,已生成新物品：${level3_description}`);
+          }
+
+          //生成地图
+          if (toolname === "Generate_Location") {
+            console.log("进入生成地图工具");
+            console.log("ai生成结果为:", toolArg);
+            const level3_description = `地点名称:\n${toolArg.name}\n所在大陆或地区:\n${toolArg.region}\n
+            危险等级:\n${toolArg.danger_level}\n简要描述，包括环境、氛围、特征:\n${toolArg.description}\n
+            势力分布:\n${toolArg.势力分布}\n
+            战力范围:\n${toolArg.战力范围}\n规则:\n${toolArg.规则}
+            和平状态:\n${toolArg.和平状态}\n
+            常驻或关键人物名称列表:\n${toolArg.bound_items}\n
+            此地特有的重要物品名称列表:\n${toolArg.和平状态}\n
+            包含的子区域或关联地点:\n${toolArg.bound_locations}\n
+            `;
+            const newMap = {
+              id: `Item_${Date.now()}`,
+              name: toolArg.name,
+              description: level3_description,
+              metadata: {
+                inhabitants: toolArg.inhabitants,
+                bound_items: toolArg.bound_items,
+                bound_locations: toolArg.bound_locations,
+                势力分布: toolArg.势力分布,
+              },
+            };
+
+            //生成向量
+            const vector = (
+              await embedder(newMap.description, {
+                pooling: "mean",
+                normalize: true,
+              })
+            ).tolist()[0];
+            console.log("成功生成向量");
+            console.log("Map 对象:", newMap);
+            console.log("Map.id:", newMap.id);
+            console.log("ids 数组:", [newMap.id]);
+            await collection.add({
+              ids: [newMap.id],
+              embeddings: [vector],
+              metadatas: [newMap.metadata],
+              documents: [newMap.description],
+            });
+            console.log("成功放入向量数据库");
+
+            console.log("此为ai生成的地图:", level3_description);
+
+            //在工具的返回中加入一个日志
+            toolResult.push(`第三层,已生成新地图：${level3_description}`);
           }
         }
       } else {
@@ -562,39 +703,43 @@ ${Plot}`;
   //🔴 4, 进入面向用户层
   try {
     const level4_prompt = `
-    【角色】
-你是修仙世界的【因果推演师】。你的职责是根据以下所有信息，推演用户行为的结果，并用最简洁的语言描述发生了什么，以及用户的状态（背包、面板等）发生了哪些变化。
+   【角色】
+   你是五层架构中的第四层:【因果推演师】。你的职责是根据以下所有信息，推演用户行为的结果，并生成一段面向用户的修仙风格回复。回复中必须自然、清晰地描述所有发生的变化（如获得/消耗物品、修为增减、受伤、突破等），让用户能感受到世界的反馈，同时为第五层提供足够的信息。
 
 【输入】
-你将获得以下信息：
 - **用户原始请求**：${userInput}
 - **第一层查询结果**：${QueryResult}
-- **第二层生成的剧情框架**：${Plot}（包含起承转合）
-- **第三层生成的实体**：${{}}（物品、人设、地点的摘要列表，包含名称、所属、位置等）
-- **当前世界状态**：用户背包{{backpack}}、面板{{player}}、所在位置{{location}}等
-- **世界观底层逻辑**：${World_Rule}（参考用）
+- **第二层生成的剧情框架**：${Plot}
+- **第三层生成的实体**：${toolResult}（物品、人设、地点的摘要列表）
+- **世界观底层逻辑**：${World_Rule}
 
-【任务】
-1. **推演行为结果**：根据用户意图、剧情框架和当前状态，推演用户执行该行为后会发生什么。例如：
-   - 若用户战斗，则推演胜负、受伤程度、消耗物品、获得战利品等。
-   - 若用户探索，则推演发现新地点、遭遇事件、获得物品等。
-   - 若用户修炼，则推演修为增长、突破可能、消耗灵石等。
-2. **整合信息**：结合第三层生成的实体，判断哪些会被触发、使用或改变。
-3. **输出一段简洁的描述**：用一两句话说明发生了什么，并明确指出用户状态的变化（如“修为+100，灵石-50，获得丹药一枚”）。描述要清晰，便于后续层理解并执行实际修改。
+【推演规则】
+1. 根据用户意图、剧情框架和当前状态，推演行为结果（胜负、受伤程度、获得/消耗物品、修为变化、突破结果等）。
+2. 所有推演必须基于输入信息，符合世界观，不得凭空编造。
+3. 如果是在剧情中,尽量不要直接给出全部剧情,而是只给出一个瞬间,或者一个节点结果,不能直接给出用户整个剧情,要引导他进入剧情体验
+4(核心).  **逻辑校验**：首先检查第二层剧情框架是否与世界观底层逻辑一致，特别是以下核心规则：
+   - **境界碾压**：高一个大境界的修士对低境界有绝对压制，低阶修士不可能主动挑衅或对抗高阶修士（除非有特殊道具或背景，且必须在剧情中明确说明）。
+   - **实力匹配**：战斗结果必须基于双方实力对比，不能出现以弱胜强的不合理情况。
+   - **因果连贯**：人物行为应有合理动机，事件之间要有因果关系。
+   - **设定一致**：所有出现的物品、人物、地点必须符合已有设定（如法宝品阶、丹药功效等）。
 
-【规则】
-- **必须基于输入信息**，不得凭空编造。
-- **确保推演符合世界观**。
-- **语言极其简洁**，避免任何修饰，只陈述事实和变化。
-- **不调用工具**，只输出文本。
+   如果发现剧情存在明显违背世界观的设定（例如炼气期小修士试图抢夺金丹期修士的灵草），你必须以世界观为准，重新推演合理的结果，并在回复中体现实际发生的合理情况（例如“那炼气期小修士冲上去，被金丹期修士随手一挥便重伤倒地”）。不得盲目跟随剧情中的不合理元素。
+
+【输出要求】
+- 生成一段修仙风格的自然语言回复，称呼用户为「道友」。
+- 回复中必须明确提及所有发生的变化，但一定要具体,否则后面的第五层难以解读具体变化了什么
+- 语言生动形象，可适当使用比喻，但不要过于冗长。
+- 不要出现任何技术术语（如“数值”、“API”、“工具”等）。
 
 【示例】
 用户请求：“我要击杀那个魔修。”
-输入：用户修为筑基中期，背包有“飞剑”，剧情框架为“遇到魔修挑衅”，第三层生成了“魔修（金丹初期）”和“魔窟地点”。
+输入：用户修为筑基中期，背包有“飞剑”，剧情生成了“魔修（金丹初期）”。
 输出：
-你与金丹初期的魔修激战，不敌受伤，魔修遁入魔窟。你的灵力因战斗消耗减少50点。功法XXX获得了10点熟练度
+道友，你与那金丹初期的魔修在荒野相遇，一场激战就此展开。你催动飞剑，剑光如虹，奈何对方境界高出你许多，硬撼之下，你渐感不支。魔修一掌击中你胸口，你气血翻涌，修为略有跌落，飞剑也灵光暗淡，受损不轻。最终你拼尽全力逃脱，魔修遁入身后魔窟，你需从长计议。
 
-  (注意,需要注意的参数请根据用户面板而输出对应数值) `;
+（注：此回复隐含了修为减少、飞剑受损、魔修逃脱等变化，第五层可从“修为略有跌落”推断需减少修为，从“飞剑受损”推断需减少飞剑物品。）
+
+现在，请根据实际输入生成推演结果。`;
 
     //创建messages
     const level4_messages = [
@@ -648,8 +793,8 @@ ${Plot}`;
     console.log("检查是否有 tool_calls：", AiReply.tool_calls);
     level4_Replay = AiReply.content;
   } catch (error) {
-    console.log("第五层出错了", error);
-    return "第五层处理失败，请稍后再试。";
+    console.log("第四层出错了", error);
+    return "第四层处理失败，请稍后再试。";
   }
 
   //🔴 5, 工具执行层
@@ -657,13 +802,13 @@ ${Plot}`;
     console.log("🔴 5, 进入工具执行层.");
 
     const level5_prompt = `
-【角色设定】:你是五层架构中的第五层【最终执行者】。你的唯一职责是：基于第四层推演出的结果，严格从给定的工具列表中选择最合适的工具执行，并根据所有信息生成最终的自然语言回复。
+【角色设定】:你是五层架构中的第五层【最终执行者】。你的唯一职责是：基于第四层推演出的结果，严格从给定的工具列表中选择最合适的工具执行
 
 【核心任务】
 1.  仔细阅读下方的【第四层推演结果】【用户原始问题】【第一层查询结果】【可用工具列表】；
 2.  从【第四层推演结果】中解析出需要修改的数据变化（如背包物品增减、面板属性变化、学习功法技艺、突破结果等）；
 3.  根据解析出的变化，从【可用工具列表】中选择对应的工具执行（可能需要多次调用，例如同时添加物品和修改修为）；
-4.  调用完所有必要工具后，根据推演结果、查询结果、工具执行情况等，生成一段符合修仙风格的最终回复，回复给用户。
+4.  有些信息也许比较隐晦,需要你多多思考,比如有时候出现"增加些许灵石",你可以自行判断增加多少.
 
 【输入上下文】
 ---
@@ -691,18 +836,11 @@ ${QueryResult}
 1.  【必须基于第四层推演结果】：所有需要修改的数据必须来自推演结果，不得凭空编造；
 2.  【参数准确】：调用工具时，参数要准确对应推演结果中描述的变化（如物品名称、数量、属性值等）；
 3.  【多次调用】：如果推演结果涉及多个变化，需依次调用对应工具，不要合并或遗漏；
-4.  【最后生成回复】：调用完所有工具后，必须生成一段最终回复，回复给用户；
-5.  【回复风格】：
-    - 称呼用户为「道友」；
-    - 语言通俗易懂，适当加入修仙氛围；
-    - 可适当在关键词处使用markdown标记（如**加粗**、高亮），增强可读性；
-    - 不要暴露任何技术术语（如“工具”、“调用”、“函数”等）；
-    - 回复应简洁自然，避免冗余。
+
 
 【绝对禁止】
 - 禁止在推演结果没有指明的情况下修改数据；
 - 禁止选择不在列表中的工具；
-- 禁止不生成回复。
 
 【示例(只是参考,希望你自行优化)】
 第四层推演结果：你与金丹初期的魔修激战，不敌受伤，魔修遁入魔窟。你的灵力因战斗消耗减少50点。
@@ -710,7 +848,6 @@ ${QueryResult}
 你的行动：
 - 调用 Backpack_reduceitems，参数：items: [{ name: "飞剑", value: 500, mount: 1 }]
 - 调用 Player_changeAttribute，参数：: spiritual_power -50
-最终回复：道友，你与那金丹初期的魔修一场激战，虽奋力拼杀，奈何境界悬殊，最终不敌受伤。你的**飞剑**在战斗中受损，灵力也因消耗而跌落**50点**。那魔修遁入魔窟，你需从长计议。
 
 现在，请基于以上规则，根据实际输入执行任务。
 `;
@@ -754,7 +891,7 @@ ${QueryResult}
         tool_choice: "auto", //自动选择调用,注意这里tool没有s的
       }),
     };
-    //第二次发送
+
     console.log("第五次发送api");
     const response2 = await fetch(API_URL, Aiconfiguration);
     const level5_data = await response2.json();
@@ -801,7 +938,7 @@ ${QueryResult}
           let count = 0;
           for (const item of toolArg.items) {
             count++;
-            backpack.add(item); //每次遍历数组都只添加一个对象
+            addItem(item); //每次遍历数组都只添加一个对象
           }
           console.log(`成功添加${count}件物品到背包!`);
           //由于是批量添加,所以ai返回的每一个数组里面,都要进行解析,看看它是否一口气返回了多个数组
@@ -825,7 +962,7 @@ ${QueryResult}
           const returncontent = toolArg.items.map((item) => {
             count++;
             // 拿到reduce方法返回的结果，包装成和添加一致的列表项
-            const useResult = backpack.reduce(item);
+            const useResult = reduceItem(item);
             return `- ${useResult}`; // 用- 开头，和添加的列表格式完全对齐
           });
           const returncontent2 = returncontent.join("\n");
@@ -838,7 +975,7 @@ ${QueryResult}
           console.log("ai调用增加功法工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(PlayerData.add_Cultivation_Technique(toolArg));
+          toolResult.push(add_Cultivation_Technique(toolArg));
         }
 
         //  增加技艺
@@ -846,19 +983,7 @@ ${QueryResult}
           console.log("ai调用增加技艺工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(PlayerData.add_Technique(toolArg));
-        }
-
-        //生成剧情
-        if (toolname === "Generate_Plot") {
-          console.log("进入剧情生成工具");
-          const finia_plot =
-            toolArg.Beginning +
-            toolArg.Continuation +
-            toolArg.Change +
-            toolArg.SummingUp;
-          Plot.push(finia_plot);
-          console.log("最终剧情为:", finia_plot);
+          toolResult.push(add_Technique(toolArg));
         }
 
         //突破判断
@@ -888,19 +1013,13 @@ ${QueryResult}
           //以下是具体操作数值
           //......
         }
-
-        //生成物品
-        if (toolname === "Generate_Items") {
-          console.log("进入生成物品工具");
-          console.log("物品名称:", toolArg.name);
-        }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
       console.log("toolResult==", toolResult);
     }
   } catch (error) {
-    console.log("第四层出现错误", error);
-    return "第四层处理失败，请稍后再试。";
+    console.log("第五层出现错误", error);
+    return "第五层处理失败，请稍后再试。";
   }
   return level4_Replay;
 }

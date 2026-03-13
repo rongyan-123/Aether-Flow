@@ -403,7 +403,16 @@ const tools = [
         "根据场景、剧情、需求等生成一件修仙物品，并绑定到对应的人物、地点或势力。语言简洁，避免浪费token。",
       parameters: {
         type: "object",
-        required: ["name", "look", "value", "level", "effect"],
+        required: [
+          "name",
+          "look",
+          "value",
+          "level",
+          "effect",
+          "owner",
+          "location",
+          "plot_hint",
+        ],
         properties: {
           name: {
             type: "string",
@@ -419,11 +428,18 @@ const tools = [
           },
           level: {
             type: "string",
-            description: "品阶，格式：X阶X品（参考天地玄黄设定）。",
+            description: `
+            品阶,
+            品阶设定参考：
+            物品按天地玄黄分阶，每阶上中下三品。
+            黄阶（炼气/筑基）、玄阶（金丹/元婴）、地阶（化神/灵界）、天阶（仙界）。
+            下品,对应当前阶的前期,中品,对应中期,上品,对应后期
+            填写格式如“天阶上品”。
+    `,
           },
           effect: {
             type: "string",
-            description: "来历、用途、效果、适用条件，可含剧情伏笔。",
+            description: "用途、效果、适用条件.",
           },
           // 绑定字段（可选，但推荐关联）
           owner: {
@@ -455,16 +471,24 @@ const tools = [
         type: "object",
         required: [
           "name",
+          "look",
           "background",
           "personality",
           "combat_power",
           "status",
           "goal",
+          "location",
+          "affiliation",
+          "items",
         ],
         properties: {
           name: {
             type: "string",
             description: "姓名，古风，符合性格特质。",
+          },
+          look: {
+            type: "string",
+            description: "外貌描写,请结合其他信息书写,注意区分男女。",
           },
           background: {
             type: "string",
@@ -481,7 +505,7 @@ const tools = [
           },
           status: {
             type: "string",
-            description: "身份地位，所属势力（如XX宗门掌门、散修等）。",
+            description: "身份地位，（如XX宗门掌门、散修等）。",
           },
           goal: {
             type: "string",
@@ -515,7 +539,19 @@ const tools = [
         "根据剧情生成一个修仙世界的地点（如宗门、秘境、城池等），绑定其势力、居民、规则及关联物品/人物。语言简洁。",
       parameters: {
         type: "object",
-        required: ["name", "region", "danger_level", "description"],
+        required: [
+          "name",
+          "region",
+          "danger_level",
+          "description",
+          "势力分布",
+          "战力范围",
+          "规则",
+          "和平状态",
+          "inhabitants",
+          "bound_items",
+          "bound_locations",
+        ],
         properties: {
           name: {
             type: "string",

@@ -103,7 +103,7 @@ function add_Technique(obj) {
 
 //======================🔴读取用户背包
 const rawInventory = fs.readFileSync("./store/inventory.json", "utf8");
-const backpack = JSON.parse(rawInventory);
+const backpack = JSON.parse(rawInventory); //转为对象
 console.log("成功读取背包");
 
 //💡1, 查询背包
@@ -116,7 +116,7 @@ function query_backpack() {
 //💡2,增加物品函数
 function addItem(obj) {
   console.log("成功进入添加物品工具");
-  for (const item of backpack) {
+  for (const item of backpack.data) {
     //找到物品
     if (obj.name === item.name) {
       console.log("找到物品");
@@ -131,7 +131,7 @@ function addItem(obj) {
     }
   }
   //如果遍历完,没找到物品,那就新增
-  backpack.push({
+  backpack.data.push({
     id: Date.now(),
     name: obj.name,
     value: obj.value,
