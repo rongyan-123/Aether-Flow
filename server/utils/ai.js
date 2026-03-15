@@ -363,6 +363,7 @@ ${World_Rule}
 - 重大事件（如金丹期修士获胜、邀请主角）必须有合理铺垫或动机。
 - 战斗结果必须基于实力对比，不能出现以弱胜强（除非有特殊法宝或机缘，需在剧情中明确说明）。
 - 人物动机要清晰，不能无缘无故做出不合常理的行为。
+- 具体逻辑请务必遵照底层逻辑(世界观设定):${World_Rule}
 
 【输出格式】
 直接调用Generate_Plot工具，将各个个部分的文字填入对应参数。无需额外解释。
@@ -372,12 +373,12 @@ ${World_Rule}
 用户原始输入：
 ${userInput}
 
-世界观设定(底层逻辑):
-${World_Rule}
+
 
 ---
 
 【示例】
+✅ 正确示例（符合逻辑铁则）：
 用户输入：“我想去坊市看看有没有好东西。”
 上下文：用户修为筑基中期，背包有500灵石，当前在青云宗。
 生成的剧情可能如下：
@@ -386,6 +387,10 @@ ${World_Rule}
 - Change：当你准备离开坊市时，忽然听到远处传来爆炸声，一股魔气冲天而起——有魔修在坊市内作乱！你发现那魔修正是刚才小贼的同伙，他冲你冷笑，显然认出了你（伏笔回收）。
 - SummingUp：你与魔修激战，凭借刚买的聚气丹临时提升灵力，最终将其击退（变强）。坊市管理者感谢你，奖励你500灵石，并邀请你参加明晚的拍卖会。你回到洞府休息，准备明天拍下筑基丹（休憩+铺垫）。
 - clue:出现人物:小贼,魔修,管理者等等,出现物品:管理者给予的宝物,聚气丹,出现场景:坊市,拍卖会,
+
+❌ 错误示例（违反境界碾压）：
+- Beginning：你在灵谷发现一株千年灵草，但一头金丹期妖兽守护在一旁。一个炼气期小修士竟冲上去想抢夺，被妖兽一爪拍飞。（这里小修士主动挑战金丹妖兽，不符合逻辑）
+- 修正：应改为小修士远远观望，不敢靠近。
 
 现在，请根据用户的最新输入和当前上下文，生成合适的剧情并调用工具。`;
 
@@ -570,6 +575,10 @@ ${Plot}`;
                 combat_power: toolArg.combat_power,
                 location: toolArg.location,
                 affiliation: toolArg.affiliation,
+                items:
+                  toolArg.items && toolArg.items.length > 0
+                    ? toolArg.items
+                    : ["无"], // 如果有 items 字段
               },
             };
 
@@ -657,10 +666,20 @@ ${Plot}`;
               name: toolArg.name,
               description: level3_description,
               metadata: {
-                inhabitants: toolArg.inhabitants,
-                bound_items: toolArg.bound_items,
-                bound_locations: toolArg.bound_locations,
-                势力分布: toolArg.势力分布,
+                // 处理空数组：如果为空或未定义，则替换为 ["无"]
+                inhabitants:
+                  toolArg.inhabitants && toolArg.inhabitants.length > 0
+                    ? toolArg.inhabitants
+                    : ["无"],
+                bound_items:
+                  toolArg.bound_items && toolArg.bound_items.length > 0
+                    ? toolArg.bound_items
+                    : ["无"],
+                bound_locations:
+                  toolArg.bound_locations && toolArg.bound_locations.length > 0
+                    ? toolArg.bound_locations
+                    : ["无"],
+                势力分布: toolArg.势力分布 || "未知", // 字符串字段可设默认值
               },
             };
 
@@ -702,6 +721,8 @@ ${Plot}`;
   let level4_Replay = "";
   //🔴 4, 进入面向用户层
   try {
+    console.log("🔴 4, 进入面向用户层");
+
     const level4_prompt = `
    【角色】
    你是五层架构中的第四层:【因果推演师】。你的职责是根据以下所有信息，推演用户行为的结果，并生成一段面向用户的修仙风格回复。回复中必须自然、清晰地描述所有发生的变化（如获得/消耗物品、修为增减、受伤、突破等），让用户能感受到世界的反馈，同时为第五层提供足够的信息。
@@ -893,9 +914,14 @@ ${QueryResult}
     };
 
     console.log("第五次发送api");
-    const response2 = await fetch(API_URL, Aiconfiguration);
-    const level5_data = await response2.json();
-
+    let response2;
+    let level5_data;
+    try {
+      response2 = await fetch(API_URL, Aiconfiguration);
+      level5_data = await response2.json();
+    } catch (err) {
+      console.error("第五层 fetch 网络错误:", err);
+    }
     console.log("第5次API完整响应:", JSON.stringify(level5_data, null, 2)); // 先打印，看实际返回
 
     const AiReply2 = level5_data.choices[0].message; // 包含所有回复和工具使用情况

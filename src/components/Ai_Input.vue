@@ -12,8 +12,12 @@
 
 <script setup>
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
+import { useInventoryStore } from "@/stores/Inventory";
+import { usePlayerStore } from "@/stores/player";
 import { ref } from "vue";
 const Chat = useChatHistoryStore();
+const backpack = useInventoryStore();
+const player = usePlayerStore();
 const userInput = ref("");
 async function sendHistory() {
   //非空检查
@@ -44,9 +48,12 @@ async function sendHistory() {
       body: JSON.stringify({ midInput }),
     });
     const data = await response.json(); //需要await
-    console.log("最终回复为:", data.reply);
+    console.log("最终回复为:", data.final_res.reply);
     //将对应ai回复输送到历史记录中,为下次回答做准备
-    Chat.assistantadd(data.reply);
+    Chat.assistantadd(data.final_res.reply);
+    //更新背包和面板
+    backpack.data = data.final_res.inventory;
+    player.$state = data.final_res.PlayerData;
   } catch (error) {
     console.log(error);
   }
