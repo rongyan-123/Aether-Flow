@@ -14,12 +14,32 @@
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
 import { useInventoryStore } from "@/stores/Inventory";
 import { usePlayerStore } from "@/stores/player";
-import { ref } from "vue";
+import { eventBus } from "@/utils/eventBus";
+import { onMounted, onUnmounted, ref } from "vue";
 const Chat = useChatHistoryStore();
 const backpack = useInventoryStore();
 const player = usePlayerStore();
 const userInput = ref("");
+
+//获取游戏开始时,用户选择的数据
+let userInformation = "无";
+
+onMounted(() => {
+  eventBus.on("user-info-updated", handler);
+});
+onUnmounted(() => {
+  eventBus.off("user-info-updated", handler);
+});
+//获取数据的回调函数
+function handler(data) {
+  console.log("数据传输成功:", data);
+  userInformation = data;
+}
+
+//发送到后端的函数
 async function sendHistory() {
+  console.log("检查用户输入", userInformation);
+
   //非空检查
   const check = userInput.value.trim();
   if (!check) {

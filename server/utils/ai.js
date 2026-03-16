@@ -23,21 +23,21 @@ const {
 const { ChromaClient } = require("chromadb");
 //chatGPT地址
 // 原 API 地址
-const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+//const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 // 换成备用地址（二选一）
 //const API_URL = "https://api.chatanywhere.com.cn/v1/chat/completions";
 // 或
 // const API_URL = "https://api.openai-proxy.com/v1/chat/completions";
 //豆包:
 //2.0
-//const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
 ////
-const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
+//const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-//const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
+const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -50,8 +50,8 @@ const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-const LLM = "gpt-4o-mini";
-//const LLM = "doubao-seed-2-0-pro-260215";
+//const LLM = "gpt-5.2";
+const LLM = "doubao-seed-2-0-pro-260215";
 
 // ==================== 核心请求函数 ====================
 //分层如下:
@@ -61,6 +61,7 @@ const LLM = "gpt-4o-mini";
 
 //该函数拿到的是ai回复,类型是字符串
 async function chatWithAI(userInput) {
+  console.time("生成耗时");
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
 
@@ -134,7 +135,7 @@ async function chatWithAI(userInput) {
   // console.log("🔴 面板原始数据：", realPlayerdata); // 看面板数据是不是真的有内容
   // console.log("🔴 最终给AI的系统提示词：", finalSystemPrompt2); // 看面板占位符到底有没有被替换掉
 
-  // // 收集所有工具的执行结果,放在全局中使用
+  // // 收集所有工具的执行结果,放在当前回复中使用
   const toolResult = [];
   //获取第一次查询结果
   const QueryResult = [];
@@ -144,6 +145,9 @@ async function chatWithAI(userInput) {
   let Plot = "";
   //判断是否进入第二层生成剧情
   let Proceed = "";
+
+  //判断游戏是否开始
+  let Game_start = "";
   //🔴 1, 数据查询层
   try {
     console.log("🔴 1, 进入数据查询层.");
@@ -156,6 +160,8 @@ async function chatWithAI(userInput) {
 【核心任务】
 1.  分析用户的当前行为、场景、意图；
 2.  可以多次调用查询工具,已加入rag检索,所以建议直接查询整句话,不要拆开,然后可以多次查询,同时,请务必查询相关联的多个信息,
+查询工具Query_Data一定是最高优先级调用的工具,调用其他工具前,一定要搭配调用查询工具Query_Data
+(只有一种情况不需要调用查询工具,那就是用户回复的是无意义的动作,比如开始游戏,但如果是战斗或者攻击,还是要调用查询的,因为其虽然是动作,但是有意义,需要判断双方实力等等)
   从以下维度逐一判断是否需要查询，只要有不确定的信息，就必须调用查询工具：
     - 【场景】：用户当前所在的地点、环境设定；
     - 【物品】：用户提到的所有物品的价值、品阶、用途；
@@ -164,10 +170,11 @@ async function chatWithAI(userInput) {
     - 【行为】：用户执行的某个行为,所关联的所有事物;
 3.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
 4.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
-5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包
+5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包,同时也要查询相关信息
 6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
 7.  注意,此处要根据用户意图和行为,判断是否进入第二层生成剧情,具体可以查看工具judgment_of_proceed描述
 8.  如果历史记录为空,建议调用judgment_of_proceed工具生成开头剧情
+9. 当用户第一句话有开始游戏的意思,那就一定要调用此工具Init_game,同时此刻必须调用查询背包和面板的工具!如果聊天记录中已经有了一次开始游戏,就绝对不能调用第二次开始游戏!
 
 【只允许调用的工具列表】
 跳过:Skip
@@ -175,6 +182,7 @@ async function chatWithAI(userInput) {
 查询用户背包:Query_Backpack
 查询用户面板:Query_PlayerStats
 是否进入第二层叙事规划层judgment_of_proceed
+游戏开始,初始化游戏工具Init_game
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
 ---
@@ -208,10 +216,6 @@ ${World_Rule}
 ✅ 正确示范4：
 用户问题：“我现在要突破”
 你的行动：调用Check_Breakthrough和Query_Data,直接进行突破判断,同时也要查询一些相关信息给后续的ai解读
-
-❌ 错误示范1：
-用户问题：“把燃血秘术加入我的面板”
-你的行动：调用了 Backpack_additems 或 Technique_Add → 绝对禁止！
 
 ❌ 错误示范2：
 用户问题：“结丹是多少修为”
@@ -325,6 +329,12 @@ ${World_Rule}
           console.log("Proceed:", Proceed);
         }
 
+        if (toolname === "Init_game") {
+          console.log("开始游戏初始化");
+          Proceed = "yes";
+          Game_start = toolArg.start;
+        }
+
         console.log("当前QueryResult内容:", QueryResult);
       }
       console.log("查询结束");
@@ -357,6 +367,8 @@ ${World_Rule}
 6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
 7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
 8. 生成完剧情,判断是否需要调用judgment_of_proceed_3,进入下一层生成对应道具,人设等等,判断依据:
+9. 如果此值Game_start:${Game_start}为yes,说明游戏开始,你的行为逻辑将有所改变,你将生成一段更符合开头的剧情,只使用正叙,不要倒叙,不要插叙,生成的剧情要符合小说开头,有爽点和钩子,迅速吸引用户
+
 
 【逻辑铁则】
 - 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
@@ -745,12 +757,17 @@ ${Plot}`;
    - **设定一致**：所有出现的物品、人物、地点必须符合已有设定（如法宝品阶、丹药功效等）。
 
    如果发现剧情存在明显违背世界观的设定（例如炼气期小修士试图抢夺金丹期修士的灵草），你必须以世界观为准，重新推演合理的结果，并在回复中体现实际发生的合理情况（例如“那炼气期小修士冲上去，被金丹期修士随手一挥便重伤倒地”）。不得盲目跟随剧情中的不合理元素。
+5. 如果用户有某种需求,请在下一段剧情中加入对应的需求,而不是当场拟定一个剧情让用户参与,这样太假了,毫无铺垫,毫无代入感,这个时候你可以根据搜索结果阐述和解释一下他的需求,而非直接拟定剧情
+6. 绝对不自己拟定剧情,没有出现的剧情不要乱加,最多只允许修改原剧情中的一些变量,细节.
+7. 如果此值Game_start:${Game_start}为yes,说明游戏开始,需要更新背包和个人面板,所以你的行为逻辑将有所改变,你将自动生成几个背景,然后根据QueryResult中的背包和面板格式,说明各个背景中的初始背包和面板是什么样的
+
 
 【输出要求】
 - 生成一段修仙风格的自然语言回复，称呼用户为「道友」。
 - 回复中必须明确提及所有发生的变化，但一定要具体,否则后面的第五层难以解读具体变化了什么
 - 语言生动形象，可适当使用比喻，但不要过于冗长。
 - 不要出现任何技术术语（如“数值”、“API”、“工具”等）。
+- 回复格式一定要多分行,可以使用html标签进行加粗,改颜色,写h1格式标题,总之要让用户看着舒服
 
 【示例】
 用户请求：“我要击杀那个魔修。”
@@ -830,6 +847,9 @@ ${Plot}`;
 2.  从【第四层推演结果】中解析出需要修改的数据变化（如背包物品增减、面板属性变化、学习功法技艺、突破结果等）；
 3.  根据解析出的变化，从【可用工具列表】中选择对应的工具执行（可能需要多次调用，例如同时添加物品和修改修为）；
 4.  有些信息也许比较隐晦,需要你多多思考,比如有时候出现"增加些许灵石",你可以自行判断增加多少.
+5.  请注意推敲+分辨第四层的用词,究竟有没有给出绝对的陈述句,比如"消耗","使用"等等此类绝对的动词,如果只是询问用户,"如果","若"此类假设语句,那么说明此句话没有消耗物品,那么你就继续阅读下一句,注意分辨用词
+6.  如果此值Game_start:${Game_start}为yes,说明游戏开始,需要更新背包和个人面板,所以你的行为逻辑将有所改变,你需要将原背包全部清空,同时面板也全部清空,然后读取第四层的回复,生成一个新的背包和面板,此处也需要注意分辨用词,第四层可能是在给用户选择,还没做出选择,则你可以跳过
+
 
 【输入上下文】
 ---
@@ -1047,6 +1067,8 @@ ${QueryResult}
     console.log("第五层出现错误", error);
     return "第五层处理失败，请稍后再试。";
   }
+
+  console.timeEnd("生成耗时");
   return level4_Replay;
 }
 

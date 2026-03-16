@@ -592,7 +592,7 @@ const tools = [
           inhabitants: {
             type: "array",
             items: { type: "string" },
-            description: "常驻或关键人物名称列表。",
+            description: "常驻或关键人物名称列表,哪怕写无,也不能为空",
           },
           bound_items: {
             type: "array",
@@ -710,6 +710,26 @@ const tools = [
     },
   },
   ///
+
+  //游戏开始初始化
+  {
+    type: "function",
+    function: {
+      name: "Init_game",
+      description:
+        "这是一个初始化游戏的工具,当用户第一句话有类似于[开始游戏]的意思时,就调用此工具,告诉后续ai需要生成初始面板和初始背包,而此工具只管发出信号",
+      parameters: {
+        type: "object",
+        required: ["start"],
+        properties: {
+          start: {
+            type: "stirng",
+            enum: ["yes"],
+          },
+        },
+      },
+    },
+  },
 ];
 
 const layer1Names = [
@@ -718,6 +738,7 @@ const layer1Names = [
   "Query_Backpack",
   "Query_PlayerStats",
   "judgment_of_proceed_2",
+  "Init_game",
 ];
 
 const layer1Tools = tools.filter((tool) => {

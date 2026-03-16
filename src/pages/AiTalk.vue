@@ -2,23 +2,31 @@
   <!-- ✅ 外层容器保持不变 -->
   <div class="chat-container">
     <h1>AI 聊天</h1>
-    <!-- 聊天消息区域 -->
-    <div class="talk" ref="tobottom">
-      <div class="message-item" v-for="item in history.data" :key="item.id">
-        <!-- 用户消息：靠右 -->
-        <div v-if="item.role === 'user'" class="message user">
-          {{ item.content }}
-        </div>
 
-        <!-- AI 消息：靠左 -->
-        <div v-else-if="item.role === 'assistant'" class="message assistant">
-          <span v-html="parseMarkdown(item.content)"></span>
-        </div>
-      </div>
+    <!--选择界面-->
+    <div v-show="game_start === false">
+      <Information_Input @input-user="Game_start"></Information_Input>
     </div>
 
-    <!-- 输入框区域 -->
-    <Ai_Input class="bottom"></Ai_Input>
+    <div v-show="game_start === true">
+      <!-- 聊天消息区域 -->
+      <div class="talk" ref="tobottom">
+        <div class="message-item" v-for="item in history.data" :key="item.id">
+          <!-- 用户消息：靠右 -->
+          <div v-if="item.role === 'user'" class="message user">
+            {{ item.content }}
+          </div>
+
+          <!-- AI 消息：靠左 -->
+          <div v-else-if="item.role === 'assistant'" class="message assistant">
+            <span v-html="parseMarkdown(item.content)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入框区域 -->
+      <Ai_Input class="bottom"></Ai_Input>
+    </div>
   </div>
 </template>
 
@@ -29,6 +37,17 @@ import { marked } from "marked";
 import { ref, watch, nextTick, onMounted, onActivated } from "vue";
 const tobottom = ref(null);
 const history = useChatHistoryStore();
+let game_start = ref(false);
+
+//更新游戏状态,切换界面
+function Game_start() {
+  game_start.value = true;
+  console.log(
+    "成功进入父组件中的Game_start函数,游戏开始,game_start设置为:",
+    game_start,
+  );
+  console.log("成功切换界面");
+}
 
 //滚动逻辑
 const scrollToBottom = () => {
