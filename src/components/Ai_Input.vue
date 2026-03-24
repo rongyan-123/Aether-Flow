@@ -75,7 +75,7 @@ async function sendHistory() {
     backpack.data = data.final_res.inventory;
     player.$state = data.final_res.PlayerData;
   } catch (error) {
-    console.log(error);
+    console.log("AI_input//sendhistory发送数据时出现", error);
   }
 }
 </script>

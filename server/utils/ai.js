@@ -9,6 +9,10 @@ const {
   reduceItem,
   add_Cultivation_Technique,
   add_Technique,
+  Add_AiItems,
+  new_items,
+  backpack,
+  PlayerData,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
@@ -50,7 +54,7 @@ const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-//const LLM = "gpt-5.2";
+//const LLM = "gpt-3.5-turbo";
 const LLM = "doubao-seed-2-0-pro-260215";
 
 // ==================== 核心请求函数 ====================
@@ -60,7 +64,7 @@ const LLM = "doubao-seed-2-0-pro-260215";
 //3,面向用户层:第三次发送api,读取第一层的查询结果,还有第二层的工具返回结果,给用户做出最后的总结
 
 //该函数拿到的是ai回复,类型是字符串
-async function chatWithAI(userInput) {
+async function chatWithAI(userInput, Game_start, Init_Plot) {
   console.time("生成耗时");
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
@@ -139,15 +143,13 @@ async function chatWithAI(userInput) {
   const toolResult = [];
   //获取第一次查询结果
   const QueryResult = [];
-  //突破情况
-  const breakthrough = [];
+  // //突破情况
+  // const breakthrough = [];
   //剧情
   let Plot = "";
   //判断是否进入第二层生成剧情
   let Proceed = "";
 
-  //判断游戏是否开始
-  let Game_start = "";
   //🔴 1, 数据查询层
   try {
     console.log("🔴 1, 进入数据查询层.");
@@ -174,7 +176,7 @@ async function chatWithAI(userInput) {
 6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
 7.  注意,此处要根据用户意图和行为,判断是否进入第二层生成剧情,具体可以查看工具judgment_of_proceed描述
 8.  如果历史记录为空,建议调用judgment_of_proceed工具生成开头剧情
-9. 当用户第一句话有开始游戏的意思,那就一定要调用此工具Init_game,同时此刻必须调用查询背包和面板的工具!如果聊天记录中已经有了一次开始游戏,就绝对不能调用第二次开始游戏!
+9. 当此值Game_start:${Game_start}为false时,一定要调用judgment_of_proceed,同时此刻必须调用查询背包和面板的工具!
 
 【只允许调用的工具列表】
 跳过:Skip
@@ -182,7 +184,7 @@ async function chatWithAI(userInput) {
 查询用户背包:Query_Backpack
 查询用户面板:Query_PlayerStats
 是否进入第二层叙事规划层judgment_of_proceed
-游戏开始,初始化游戏工具Init_game
+
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
 ---
@@ -289,7 +291,7 @@ ${World_Rule}
         //rag检索
         if (toolname === "Query_Data") {
           console.log("进入rag检索工具");
-          console.log("当前查询:", toolArg.name);
+          console.log("当前查询语句:", toolArg.name);
           //此处output已经拿到转为向量后的文本了
           const output = await embedder(toolArg.name, {
             pooling: "mean",
@@ -329,12 +331,6 @@ ${World_Rule}
           console.log("Proceed:", Proceed);
         }
 
-        if (toolname === "Init_game") {
-          console.log("开始游戏初始化");
-          Proceed = "yes";
-          Game_start = toolArg.start;
-        }
-
         console.log("当前QueryResult内容:", QueryResult);
       }
       console.log("查询结束");
@@ -350,15 +346,18 @@ ${World_Rule}
       console.log("🔴 2, 进入第二层,叙事规划层.");
       const level2_prompt = `
       【角色设定】
-你是一位修仙世界的剧情架构师，任务是根据提供的上下文，调用Generate_Plot工具，生成一段符合起承转合结构的剧情大纲。同时,判断是否需要重新调用第三层生成对应物品和人设
+你是一位修仙世界的剧情架构师，任务是根据提供的上下文,还有用户行为,用户数据，调用Generate_Plot工具，生成新剧情或修改原剧情Plot,最终得到一段符合起承转合结构的剧情大纲。
 
 【输入信息】
 你将获得以下信息，必须作为生成剧情的唯一依据：
-- 用户当前状态：背包、属性、位置、任务等。
-- 最近剧情摘要（如果有）。
-- 用户本次行动意图（由前一层分析得出，如“探索”、“修炼”、“战斗”等）。
+- 用户当前背景Init_Plot
+- 最近剧情摘要Plot（如果有,放在下面了）。
+- 用户本次行动userinput
+- 整体逻辑(世界观设定)
+- 查询结果,包括用户背包和面板
 
 【生成要求】
+0. *极度重要*:如果用户此次行为对剧情并无影响,没有什么重大决定,则调用Skip工具跳过,如仅仅是买个东西,就没必要修改原大纲
 1. 剧情必须包含完整的四部分：开端（Beginning）、发展（Continuation）、转折（Change）、结局（SummingUp），每部分用最精炼的语言描述核心事件，避免任何修饰和多余描述。
 2. 开端：直接点明用户当前需要但难以实现的目标，并立刻制造一个危机。
 3. 发展：用户解决危机并获得收获；为后续埋伏笔；加入一个小爽点；保持一段相对放松的节奏。
@@ -366,9 +365,27 @@ ${World_Rule}
 5. 结局：危机解除，用户变强并收获；有一段休憩时间；为未来剧情留下铺垫。
 6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
 7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
-8. 生成完剧情,判断是否需要调用judgment_of_proceed_3,进入下一层生成对应道具,人设等等,判断依据:
-9. 如果此值Game_start:${Game_start}为yes,说明游戏开始,你的行为逻辑将有所改变,你将生成一段更符合开头的剧情,只使用正叙,不要倒叙,不要插叙,生成的剧情要符合小说开头,有爽点和钩子,迅速吸引用户
+8. 如果此值Game_start:${Game_start}为false,同时用户背景Init_Plot:${Init_Plot}不为空,则你的行为逻辑将有所改变,你将生成一段更符合背景Init_Plot的开端剧情,只使用正叙,不要倒叙,不要插叙,请注意,目的只有一个,迅速让用户代入,让用户爽
+  生成的剧情要开头强情绪,此处给出几个开头风格,可以参考,选出最符合原背景的一条:
+  a.废柴流：主角资质极差，遭宗门/家族抛弃，后获奇遇逆袭成神。
+  b.退婚流：主角被未婚妻当众退婚，受尽羞辱，发奋修炼，最终强势打脸。
+  c.扮猪吃虎流：主角表面平庸普通，实则隐藏实力，关键时刻一鸣惊人，震惊全场。
+  d.豪强回归流：曾是顶级势力嫡系，因故流落凡间，多年后强势归来，夺回属于自己的一切。
+  e.种田流：不热衷战斗，专注炼丹、炼器、种药等辅助职业，靠技术和商业积累资本，壮大势力。
+  f.奇遇流：意外发现仙人遗迹、秘宝或神兽幼崽，获得逆天传承，从此踏上强者之路。
+  g.打脸流：主角被轻视、嘲笑、排挤，却在关键时刻展现实力，让所有看不起他的人目瞪口呆。
+  h.家破人亡流：一夜之间宗门被灭、家族覆灭，主角背负血海深仇，踏上复仇之路。
+  i.复仇流：主角曾被至交/同门陷害，身败名裂，今朝归来，誓要讨回公道。
+  j.替身流：主角被当作他人的替身，终有一天揭竿而起，挣脱枷锁，活成自己。
+  k.背锅流：主角无辜替人背黑锅，被世人唾弃，历经磨难后真相大白，还自己清白。
+  l.师徒背叛流：主角为师父/门派奉献一切，却被无情抛弃，后另有机缘，终让背叛者悔不当初。
+  m.赘婿翻身流：主角入赘世家，受尽白眼，一朝崛起，让整个家族仰望。
+  n.被逐出师门流：主角因“资质平庸”被赶出山门，后凭借毅力与机缘，成就远超师门。
+  o.宿敌流：主角与命中宿敌从少年斗到中年，一路相爱相杀，最终一决高下。  
+  请别忘记,此处要结合原背景Init_Plot,二次创作的
 
+9.如果原流程中就有剧情Plot:${Plot},请在此基础上进行修改或拓展,而非重新创建一段全新剧情,如果为空,才重新根据背景Init_Plot创建
+10. 请仔细阅读用户面板和背包,确保剧情导致的数据变化,能对得上面板,比如境界不能错,面板写的是炼气期三层,你却在剧情中误将其当作五层等等
 
 【逻辑铁则】
 - 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
@@ -380,13 +397,12 @@ ${World_Rule}
 【输出格式】
 直接调用Generate_Plot工具，将各个个部分的文字填入对应参数。无需额外解释。
 
-【用户当前数据（仅用于理解上下文，绝对不能修改）】
+【可用信息】
 ---
-用户原始输入：
+用户原始输入（判断用户行为对剧情的影响）：
 ${userInput}
-
-
-
+查询结果(包括背包,面板等等)
+${QueryResult}
 ---
 
 【示例】
@@ -429,7 +445,7 @@ ${userInput}
           tool_choice: "auto",
         }),
       };
-
+      console.log("当前实体已经有:", new_items);
       console.log("准备第二次发送api");
       const level2_response = await fetch(API_URL, level2_Aiconfiguration);
 
@@ -486,12 +502,17 @@ ${userInput}
 
       const level3_prompt = `
       【角色】
-你是修仙世界的【细节生成器】。你的唯一任务是根据第二层生成的剧情，调用相应的工具（Generate_Items、Generate_Character、Generate_Location）来创建剧情中需要的新物品、人物和地点。
+你是修仙世界的【细节生成器】。你的核心任务有两个,
+1,是根据第二层生成的剧情,和已经存在的实体数组new_items，决定是否生成新实体,
+2,如果需要生成,则调用相应的工具（Generate_Items、Generate_Character、Generate_Location）来创建剧情中需要的新物品、人物和地点。如果实体数组里面已经有很多相关的数据,则不需要重复生成,直接调用Skip工具跳过
+
 
 【输入】
-你将获得第二层生成的完整剧情（包含开端、发展、转折、结局四个部分）。剧情中可能暗示需要新的物品、人物或地点（例如“遇到一只受伤的妖兽”、“发现一株灵草”、“进入一座废弃洞府”）。
+1, 你将获得第二层生成的完整剧情（包含开端、发展、转折、结局四个部分）。剧情中可能暗示需要新的物品、人物或地点（例如“遇到一只受伤的妖兽”、“发现一株灵草”、“进入一座废弃洞府”）。
+2, 已经存在的实体数组,如果很多实体已经存在,或是剧情中没什么重大新变量,则不需要生成
 
-【任务】
+
+【任务(详细版)】
 1. 仔细阅读剧情，识别出哪些地方需要生成新的实体（物品、人物、地点）。
 2. 为每个需要生成的实体调用对应的工具，一次调用只生成一个实体。可多次调用。
 3. 在调用工具时，必须根据剧情上下文填写参数，确保生成的实体与剧情一致，并相互绑定：
@@ -499,17 +520,39 @@ ${userInput}
    - **人物**：指定其所在地（location）、所属势力（affiliation）、拥有的物品（items）。
    - **地点**：指定其居民（inhabitants）、特有物品（bound_items）、关联地点（bound_locations）。
 4. 所有描述务必简洁，避免浪费token，只需填写必要信息。
+5. 如果实体数组new_items中已经存在许多跟剧情相关的实体,则不用重复生成了,但是剧情如果出现new_items中没有提及到的新实体,那就生成
+6. 所有实体必须拥有具体名称,不能含糊,不能用某个词语概括,比如古朴丹药,你就要自己根据其用处,想一个名字
+7. 所有实体尽量符合剧情,要有相关联系
 
 【输出】
 直接调用工具，不要输出任何其他内容。
 
+【工具】
+生成npc:Generate_Character
+生成物品:Generate_Items
+生成地点:Generate_Location
+跳过:Skip
+
+【可用信息】
+已经生成的实体:${new_items}
+---------------------------
+剧情:${Plot}
+
+
 【示例】
+
+
+反例:
 若剧情中提到“你在坊市遇到一位神秘老者，他手中拿着一枚古朴丹药”，则应调用：
 - Generate_Character：生成老者，设定其 location 为“坊市”，可能拥有物品 items: ["古朴丹药"]。
 - Generate_Items：生成丹药，设定其 owner 为老者，location 为“坊市”，并赋予 effect 等属性。
 
-现在，基于以下剧情执行任务：
-${Plot}`;
+正确示例:
+要有具体名字,不能含糊概括
+- Generate_Character：生成老者名字name:XXX，设定其 location 为“XXX处的坊市”，可能拥有物品 items: ["大力丹(或其他)"]。
+- Generate_Items：生成丹药，设定其 owner 为老者name:XXX，location 为“XXX处的坊市”，并赋予 effect 等属性。
+
+`;
       const level3_messages = [
         {
           id: 1,
@@ -613,6 +656,8 @@ ${Plot}`;
 
             console.log("此为ai生成的人设:", level3_description);
 
+            //只将名字放入实体数组
+            Add_AiItems(toolArg.name);
             //在工具的返回中加入一个日志
             toolResult.push(`第三层,已生成新角色：${level3_description}`);
           }
@@ -656,6 +701,8 @@ ${Plot}`;
 
             console.log("此为ai生成的物品:", level3_description);
 
+            //只将名字放入实体数组
+            Add_AiItems(toolArg.name);
             //在工具的返回中加入一个日志
             toolResult.push(`第三层,已生成新物品：${level3_description}`);
           }
@@ -716,6 +763,8 @@ ${Plot}`;
 
             console.log("此为ai生成的地图:", level3_description);
 
+            //只将名字放入实体数组
+            Add_AiItems(toolArg.name);
             //在工具的返回中加入一个日志
             toolResult.push(`第三层,已生成新地图：${level3_description}`);
           }
@@ -759,8 +808,11 @@ ${Plot}`;
    如果发现剧情存在明显违背世界观的设定（例如炼气期小修士试图抢夺金丹期修士的灵草），你必须以世界观为准，重新推演合理的结果，并在回复中体现实际发生的合理情况（例如“那炼气期小修士冲上去，被金丹期修士随手一挥便重伤倒地”）。不得盲目跟随剧情中的不合理元素。
 5. 如果用户有某种需求,请在下一段剧情中加入对应的需求,而不是当场拟定一个剧情让用户参与,这样太假了,毫无铺垫,毫无代入感,这个时候你可以根据搜索结果阐述和解释一下他的需求,而非直接拟定剧情
 6. 绝对不自己拟定剧情,没有出现的剧情不要乱加,最多只允许修改原剧情中的一些变量,细节.
-7. 如果此值Game_start:${Game_start}为yes,说明游戏开始,需要更新背包和个人面板,所以你的行为逻辑将有所改变,你将自动生成几个背景,然后根据QueryResult中的背包和面板格式,说明各个背景中的初始背包和面板是什么样的
-
+7. 如果此值Game_start:${Game_start}为false,你的回复语句则需要有所改变,说明游戏在启动阶段,你需要改为符合开头的回复:
+  a(最重要),迅速抛出引人入胜的剧情,把生成的剧情拆分,让用户进入到当前剧情中,让用户做选择,代入感要强
+  b,你需要告诉用户目前是什么状况
+  c,给出用户几个可选选项
+8. 如果剧情Plot和面板背包数据等等,信息不同步,需要你进行纠正,比如境界出现bug,面板是炼气期3层,结果剧情中是炼气期6层,需要你纠正
 
 【输出要求】
 - 生成一段修仙风格的自然语言回复，称呼用户为「道友」。
@@ -830,11 +882,22 @@ ${Plot}`;
     console.log("第4层ai回复:", AiReply.content);
     console.log("检查是否有 tool_calls：", AiReply.tool_calls);
     level4_Replay = AiReply.content;
+    console.log("toolResult==", toolResult);
+    //游戏初始化的时候,不需要第五层,因为面板和背包全部准备好了已经
+    if (Game_start === true) {
+      //异步执行
+      layer5(level4_Replay, userInput);
+    }
+    //再返回,此时第五层才执行,不耽误返回时间
+    console.timeEnd("至第四层结束时的总耗时");
+    return level4_Replay;
   } catch (error) {
     console.log("第四层出错了", error);
     return "第四层处理失败，请稍后再试。";
   }
+}
 
+async function layer5(level4_Replay, userInput) {
   //🔴 5, 工具执行层
   try {
     console.log("🔴 5, 进入工具执行层.");
@@ -848,7 +911,6 @@ ${Plot}`;
 3.  根据解析出的变化，从【可用工具列表】中选择对应的工具执行（可能需要多次调用，例如同时添加物品和修改修为）；
 4.  有些信息也许比较隐晦,需要你多多思考,比如有时候出现"增加些许灵石",你可以自行判断增加多少.
 5.  请注意推敲+分辨第四层的用词,究竟有没有给出绝对的陈述句,比如"消耗","使用"等等此类绝对的动词,如果只是询问用户,"如果","若"此类假设语句,那么说明此句话没有消耗物品,那么你就继续阅读下一句,注意分辨用词
-6.  如果此值Game_start:${Game_start}为yes,说明游戏开始,需要更新背包和个人面板,所以你的行为逻辑将有所改变,你需要将原背包全部清空,同时面板也全部清空,然后读取第四层的回复,生成一个新的背包和面板,此处也需要注意分辨用词,第四层可能是在给用户选择,还没做出选择,则你可以跳过
 
 
 【输入上下文】
@@ -859,9 +921,11 @@ ${level4_Replay}
 【2. 用户原始问题】
 ${userInput}
 ---
-【3. 第一层查询结果】
-${QueryResult}
----
+【3. 背包和面板】
+背包:${backpack}
+面板:${PlayerData}
+
+
 【4. 可用工具列表】
 添加物品: Backpack_additems
 删除物品: Backpack_reduceitems
@@ -991,8 +1055,7 @@ ${QueryResult}
           const returncontent = toolArg.items.map((item) => {
             return `- ${item.name} ×${item.mount},单件价值${item.value}`;
           });
-          const returncontent2 = returncontent.join("\n");
-          toolResult.push(`恭喜道友获得:\n${returncontent2}`);
+          console.log("已添加:", returncontent);
         }
         //批量减少背包物品
         if (toolname === "Backpack_reduceitems") {
@@ -1011,8 +1074,8 @@ ${QueryResult}
             const useResult = reduceItem(item);
             return `- ${useResult}`; // 用- 开头，和添加的列表格式完全对齐
           });
-          const returncontent2 = returncontent.join("\n");
-          toolResult.push(`已使用物品:\n${returncontent2}`);
+          console.log(`获得:`, returncontent);
+
           console.log(`成功使用${count}件物品!`);
         }
 
@@ -1021,7 +1084,7 @@ ${QueryResult}
           console.log("ai调用增加功法工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(add_Cultivation_Technique(toolArg));
+          add_Cultivation_Technique(toolArg);
         }
 
         //  增加技艺
@@ -1029,21 +1092,21 @@ ${QueryResult}
           console.log("ai调用增加技艺工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          toolResult.push(add_Technique(toolArg));
+          add_Technique(toolArg);
         }
 
-        //突破判断
-        if (toolname === "Check_Breakthrough") {
-          console.log("进入突破工具");
-          console.log("ai给出结果为", toolArg.result);
-          breakthrough.push(toolArg.result);
-        }
+        // //突破判断
+        // if (toolname === "Check_Breakthrough") {
+        //   console.log("进入突破工具");
+        //   console.log("ai给出结果为", toolArg.result);
+        //   breakthrough.push(toolArg.result);
+        // }
 
         //跳过
         if (toolname === "Skip") {
           console.log("进入跳过工具");
           console.log("ai给出原因为", toolArg.reason);
-          toolResult.push("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
+          console.log("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
           continue;
         }
 
@@ -1051,25 +1114,17 @@ ${QueryResult}
         if (toolname === "Check_Breakthrough") {
           console.log("进入突破检测工具");
           console.log("ai给出的突破结果为", toolArg.result);
-          toolResult.push(
-            "使用突破检测工具,以下是ai给出的缘由",
-            toolArg.result,
-          );
 
           //以下是具体操作数值
           //......
         }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
-      console.log("toolResult==", toolResult);
     }
   } catch (error) {
     console.log("第五层出现错误", error);
     return "第五层处理失败，请稍后再试。";
   }
-
-  console.timeEnd("生成耗时");
-  return level4_Replay;
 }
 
-module.exports = { chatWithAI };
+module.exports = { chatWithAI, layer5 };

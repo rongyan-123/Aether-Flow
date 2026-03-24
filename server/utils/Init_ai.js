@@ -1,3 +1,5 @@
+const { InitTools } = require("./aitools");
+
 //世界观设定
 const World_Rule = `
     // ==============================================
@@ -45,21 +47,21 @@ const World_Rule = `
     `;
 //chatGPT地址
 // 原 API 地址
-//const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
 // 换成备用地址（二选一）
 //const API_URL = "https://api.chatanywhere.com.cn/v1/chat/completions";
 // 或
 // const API_URL = "https://api.openai-proxy.com/v1/chat/completions";
 //豆包:
 //2.0
-const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+//const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
 ////
-//const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
+const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
+//const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -72,8 +74,8 @@ const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-//const LLM = "gpt-5.2";
-const LLM = "doubao-seed-2-0-pro-260215";
+const LLM = "gpt-3.5-turbo";
+//const LLM = "doubao-seed-2-0-pro-260215";
 
 //===================================================================
 async function Init_AI(userInformation) {
@@ -86,24 +88,33 @@ async function Init_AI(userInformation) {
 你是一位修仙世界的【开局生成器】。用户即将开始新的修仙之旅，你需要根据用户提供的基础信息，生成三个不同风格、各具特色的人物开局模板，供用户选择。
 每个模板将决定用户的初始背景、背包物品和基础面板。同时生成的背景等等,要符合底层世界观${World_Rule}
     【参考信息】
-  用户信息：${userInformation}
+  用户信息：${JSON.stringify(userInformation, null, 2)}
   【核心任务】
-生成三个修仙开局模板，每个模板需包含以下要素：
+调用三次工具Init_Player, 生成三个修仙开局模板，每个模板需包含以下要素：
 模板名称：简洁概括，例如“散修开局”、“宗门弟子”、“世家子弟”、“魔修后裔”、“机缘眷顾”等，需体现该模板的核心特点。
 背景描述：用一段话（约30-50字）简述该模板的出身、初始处境和故事背景，为后续剧情埋下伏笔。
 初始背包：包含若干物品，每个物品应有名称、价值（以灵石为单位，整数）、数量（整数）。物品需符合修仙世界观，如法器、丹药、材料、灵石等，数量和价值需合理，避免开局过于强大或贫瘠。
-初始面板：包含以下基础属性，数值需符合修仙设定且彼此协调
+初始面板：包含以下基础属性，数值需符合修仙设定且彼此协调,具体可查看工具.
 境界：起始境界，通常为炼气期某一层（如“炼气期一层”）。
-修为：格式为“当前值/上限值”，例如“0/200”（炼气期每层200修为）。
+修为：格式为“当前值/上限值”，例如“0/200”（炼气期每层200修为）。请注意,这里尽量低,越低越好
 灵根类型：如“天灵根”、“变异灵根”、“双灵根”、“三灵根”、“伪灵根”等，需符合模板背景。
 灵根等级：如“一品”、“二品”或更具体的品阶，若无则填“无”。
 灵力：格式“当前值/上限值”，例如“100/100”。
-根骨：数值范围0-20，影响修炼速度和突破成功率。
+根骨：数值范围0-20，影响修炼速度和突破成功率。  
 气运：数值范围0-20，影响机缘和事件结果。
 悟性：数值范围0-20，影响功法学习速度和熟练度。
 可选额外属性：如功法、战技、身法等，但非必须，可酌情添加。
-  【可使用的工具】
+  【注意事项】
+1, 调用三次 Init_Player 工具，每次传入一个完整的模板。player_data 必须包含所有指定字段（姓名、年龄、性别等），
+2, player_inventory 必须是非空数组。
+3, 每次调用时，必须完整提供以下字段：
+  - player_data: 包含 name, age, gender, background, level, cultivation, spiritual_root_type, spiritual_root_grade, spiritual_power, potential, fortune, comprehension, talent, technique, combat_skill, movement_skill
+  - player_inventory: 一个非空数组，每个物品包含 name, value, mount
+  注意：所有字段都必须有值，不得省略。
 
+
+  【可使用的工具】
+Init_Player
 
 【生成要求】
 多样性：三个模板应各有侧重，例如一个偏战斗、一个偏修炼、一个偏机缘，或一个散修、一个宗门、一个世家等，确保用户有不同选择。
@@ -126,24 +137,67 @@ async function Init_AI(userInformation) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${API_KEY}`,
       },
-      body:JSON.stringify({
-        model:LLM,
-        messages:messages,
-        temperature:0.7,
-        tools:,
-        tool_choice:"auto",
-      })
+      body: JSON.stringify({
+        model: LLM,
+        messages: messages,
+        temperature: 0.7,
+        tools: InitTools,
+        tool_choice: "auto",
+      }),
     };
 
-    const response = await fetch(API_URL,Aiconfiguration);
-    const data = await response.json();
-    if(!response){
+    const response = await fetch(API_URL, Aiconfiguration);
+    if (!response) {
       console.error("");
-      
+    }
+    const data = await response.json();
+
+    console.log("第一次发送api结束,输入消耗token:", data.usage.prompt_tokens);
+    console.log(
+      "第一次发送api结束,输出消耗token:",
+      data.usage.completion_tokens,
+    );
+    console.log("第一次发送api结束,总计消耗token:", data.usage.total_tokens);
+
+    const AiReply = data.choices[0].message;
+    //AI文本回复
+    const Aicontent = AiReply.content;
+    console.log("Ai文本回复为", Aicontent);
+
+    //AI返回工具
+    const Aitools = AiReply.tool_calls;
+
+    //总返回结果
+    let result = [];
+    if (Aitools && Aitools.length > 0) {
+      console.log("进入开局初始化工具");
+      let count = 0;
+      for (const tool of Aitools) {
+        const toolname = tool.function.name;
+        const toolArg = JSON.parse(tool.function.arguments);
+        count++;
+        if (toolname === "Init_Player") {
+          console.log("成功进入初始化面板");
+          console.log("当前是第", count, "次调用Init_Player工具");
+
+          console.log("Ai生成的面板", toolArg.player_data);
+          console.log("Ai生成的背包", toolArg.player_inventory);
+          if (!toolArg.player_data || !toolArg.player_inventory) {
+            console.error("无效的模板参数，跳过");
+            continue;
+          }
+          result.push({
+            player_data: toolArg.player_data,
+            player_inventory: toolArg.player_inventory,
+          });
+        }
+      }
     }
 
+    return result;
+    ///结束
   } catch (error) {
-    console.log("error");
+    console.log("Init_AI 错误详情:", error);
   }
 }
 module.exports = { Init_AI };

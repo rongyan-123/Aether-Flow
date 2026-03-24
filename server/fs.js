@@ -204,6 +204,21 @@ const rawAllData = fs.readFileSync("./StaticData/AllData.json", "utf8");
 const AllData = JSON.parse(rawAllData); //传出的是一个对象,里面的内容为{ AllData:[....] }
 //console.log(AllData);
 
+//======================================🔴读取实体
+const mid = fs.readFileSync("./store/AI_generateItems.json", "utf8");
+const new_items = JSON.parse(mid);
+
+function Add_AiItems(name) {
+  new_items.push(name);
+  fs.writeFileSync(
+    //写回,持久化处理
+    "./store/AI_generateItems.json",
+    JSON.stringify(new_items, null, 2),
+    "utf8",
+  );
+  return;
+}
+
 //======================================🔴函数测试
 if (require.main === module) {
   query_backpack();
@@ -216,6 +231,8 @@ module.exports = {
   backpack,
   history,
   AllData,
+  new_items,
+  Add_AiItems,
   add_Cultivation_Technique,
   add_Technique,
   addItem,

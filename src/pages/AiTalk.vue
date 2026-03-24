@@ -3,13 +3,17 @@
   <div class="chat-container">
     <h1>AI 聊天</h1>
 
-    <!--选择界面-->
-    <div v-show="game_start === false">
-      <Information_Input @input-user="Game_start"></Information_Input>
+    <!-- 初始化界面容器 -->
+    <div v-show="GameStart.game_start === true" class="flex-container">
+      <Information_Input @input-user="Game_start" />
     </div>
 
-    <div v-show="game_start === true">
-      <!-- 聊天消息区域 -->
+    <div v-show="GameStart.select === true" class="flex-container">
+      <user_selected @user-selected="select_model"></user_selected>
+    </div>
+
+    <!-- 聊天界面容器 -->
+    <div v-show="GameStart.ai_input === true" class="flex-container">
       <div class="talk" ref="tobottom">
         <div class="message-item" v-for="item in history.data" :key="item.id">
           <!-- 用户消息：靠右 -->
@@ -33,20 +37,26 @@
 <script setup>
 // ✅ 所有脚本逻辑完全保持不变！
 import { useChatHistoryStore } from "@/AiHistoryStores/ChatHistory";
+import { useGameStart } from "@/stores/Game_Start";
 import { marked } from "marked";
 import { ref, watch, nextTick, onMounted, onActivated } from "vue";
 const tobottom = ref(null);
 const history = useChatHistoryStore();
-let game_start = ref(false);
+//false true
+const GameStart = useGameStart();
 
-//更新游戏状态,切换界面
+//切换选择模板界面
+function select_model() {
+  console.log("成功进入父组件中的select_model函数,切换到选择界面");
+  GameStart.ai_input = true;
+  GameStart.select = false;
+}
+
+//切换到聊天界面
 function Game_start() {
-  game_start.value = true;
-  console.log(
-    "成功进入父组件中的Game_start函数,游戏开始,game_start设置为:",
-    game_start,
-  );
-  console.log("成功切换界面");
+  GameStart.select = true;
+  GameStart.game_start = false;
+  console.log("成功进入父组件中的Game_start函数,切换到聊天界面");
 }
 
 //滚动逻辑
@@ -88,6 +98,14 @@ const parseMarkdown = (content) => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+.flex-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止内容溢出影响布局 */
+  min-height: 0; /* 关键：让 flex 子元素可以正确收缩 */
 }
 
 /* 1. 整体容器：和角色面板风格完全统一的古风背景 */

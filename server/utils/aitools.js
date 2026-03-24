@@ -348,7 +348,7 @@ const tools = [
     function: {
       name: "Generate_Plot",
       description:
-        "这是一个生成剧情的工具,要求符合起承转合的节奏,同时如果用户的选择会影响剧情发展走向,则必须重新修改剧情,调用此工具,根据用户的选择,修改剧情使其合理",
+        "这是一个根据前文,生成剧情的工具,要求符合起承转合的节奏,同时如果用户的选择会影响剧情发展走向,则必须重新修改剧情,调用此工具,根据用户的选择,修改剧情使其合理",
       parameters: {
         type: "object",
         required: ["Beginning", "Continuation", "Change", "SummingUp", "clue"],
@@ -690,41 +690,178 @@ const tools = [
     },
   },
 
-  //是否进入第三层动态细节层判断
-  {
-    type: "function",
-    function: {
-      name: "judgment_of_proceed_3",
-      description:
-        "此工具用于在第二层进行判断,看看是否需要生成,修改剧情,当用户的意图中拥有主动的行为时,影响了剧情时,才需要调用此工具,说明需要进入第二层,如果用户只是询问和聊天,则不需要调用此工具",
-      parameters: {
-        type: "object",
-        required: ["judgment"],
-        properties: {
-          judgment: {
-            type: "string",
-            enum: ["yes"],
-          },
-        },
-      },
-    },
-  },
   ///
 
-  //游戏开始初始化
+  //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴游戏初始化ai专用
+
+  //生成模板
   {
     type: "function",
     function: {
-      name: "Init_game",
-      description:
-        "这是一个初始化游戏的工具,当用户第一句话有类似于[开始游戏]的意思时,就调用此工具,告诉后续ai需要生成初始面板和初始背包,而此工具只管发出信号",
+      name: "Init_Player",
+      description: `这是一个生成开局模板的工具,将根据信息自动生成以下内容:
+      第一层(面板):
+      姓名,年龄,性别,背景描述,境界,修为,灵根类型,灵根等级,灵力,根骨,气运,悟性,天赋,功法,战技,身法
+      请注意,此处所有条目,就算没有,也绝对要生成一个"无",不允许直接返回空
+      第二层(背包):
+      物品名称,物品价值,物品数量
+
+
+      `,
       parameters: {
         type: "object",
-        required: ["start"],
+        required: ["player_data", "player_inventory"],
         properties: {
-          start: {
-            type: "stirng",
-            enum: ["yes"],
+          //面板
+          player_data: {
+            type: "object",
+            description: "请在这里生成面板内容",
+            properties: {
+              name: { type: "string", description: "姓名" },
+              age: { type: "number", description: "年龄" },
+              gender: {
+                type: "string",
+                description: "性别",
+                enum: ["男", "女"],
+              },
+              background: { type: "string", description: "背景描述" },
+              level: { type: "string", description: "境界，如'炼气期一层'" },
+              numerical_cultivation: {
+                type: "string",
+                description: "修为，格式'当前/上限'，如'0/200'",
+              },
+              spiritual_root_type: {
+                type: "string",
+                description: "灵根类型，如'火灵根'",
+              },
+              spiritual_root_grade: {
+                type: "string",
+                description: "灵根等级，如'三灵根'",
+              },
+              spiritual_power: {
+                type: "string",
+                description: "灵力，格式'当前/上限',如20/100",
+              },
+              potential: {
+                type: "string",
+                description: "根骨（0-20）,格式如:12/20",
+                minimum: 0,
+                maximum: 20,
+              },
+              fortune: {
+                type: "string",
+                description: "气运（0-20）,格式如:12/20",
+                minimum: 0,
+                maximum: 20,
+              },
+              comprehension: {
+                type: "string",
+                description: "悟性（0-20）,格式如:12/20",
+                minimum: 0,
+                maximum: 20,
+              },
+              talent: {
+                type: "array",
+                description: "天赋列表，每个元素为字符串,没有则填'无'",
+                items: { type: "string" },
+              },
+              cultivation_technique: {
+                type: "array",
+                description:
+                  "所会功法列表，每个元素包含 name 和 grade,没有则填'无'",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "功法名称" },
+                    grade: {
+                      type: "string",
+                      description: "品阶，如'黄阶下品'",
+                    },
+                  },
+                  required: ["name", "grade"],
+                },
+              },
+              combat_technique: {
+                type: "array",
+                description:
+                  "战技列表，每个元素包含 name、grade、level,没有则填'无'",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "战技名称" },
+                    grade: {
+                      type: "string",
+                      description: "品阶，如'玄阶上品'",
+                    },
+                    level: {
+                      type: "string",
+                      description: "熟练度等级，如'初入'",
+                      enum: ["初入", "小成", "大成", "圆满"],
+                    },
+                  },
+                  required: ["name", "grade", "level"],
+                },
+              },
+              movement_technique: {
+                type: "array",
+                description:
+                  "身法列表，每个元素包含 name、grade、level,没有则填'无'",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "身法名称" },
+                    grade: {
+                      type: "string",
+                      description: "品阶，如'玄阶中品'",
+                    },
+                    level: {
+                      type: "string",
+                      description: "熟练度等级，如'初入'",
+                      enum: ["初入", "小成", "大成", "圆满"],
+                    },
+                  },
+                  required: ["name", "grade", "level"],
+                },
+              },
+              other_technique: {
+                type: "array",
+                description:
+                  "其他法门列表（炼丹、炼器、阵法等），每个元素包含 name、grade、type,没有则填'无',请注意,这是法门,技术,不是物品",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "法门名称" },
+                    grade: {
+                      type: "string",
+                      description: "品阶，如'黄阶中品'",
+                    },
+                    type: {
+                      type: "string",
+                      description: "类型，如'炼丹术'、'炼器术'等",
+                    },
+                  },
+                  required: ["name", "grade", "type"],
+                },
+              },
+            },
+          },
+          //背包
+          player_inventory: {
+            type: "array",
+            description: "初始背包物品列表",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "物品名称" },
+                value: {
+                  type: "number",
+                  description: "物品价值（灵石）",
+                  minimum: 0,
+                },
+                mount: { type: "number", description: "物品数量", minimum: 1 },
+              },
+              required: ["name", "value", "mount"],
+            },
           },
         },
       },
@@ -732,13 +869,13 @@ const tools = [
   },
 ];
 
+//================================================================
 const layer1Names = [
   "Query_Data",
   "Skip",
   "Query_Backpack",
   "Query_PlayerStats",
   "judgment_of_proceed_2",
-  "Init_game",
 ];
 
 const layer1Tools = tools.filter((tool) => {
@@ -746,7 +883,7 @@ const layer1Tools = tools.filter((tool) => {
 });
 
 //第二层工具
-const layer2Names = ["Generate_Plot", "judgment_of_proceed_3"];
+const layer2Names = ["Generate_Plot", "Skip"];
 
 const layer2Tools = tools.filter((tool) => {
   return layer2Names.includes(tool.function.name);
@@ -757,6 +894,7 @@ const layer3Names = [
   "Generate_Character",
   "Generate_Items",
   "Generate_Location",
+  "Skip",
 ];
 
 const layer3Tools = tools.filter((tool) => {
@@ -777,4 +915,18 @@ const layer5Tools = tools.filter((tool) => {
   return layer5Names.includes(tool.function.name);
 });
 
-module.exports = { layer1Tools, layer2Tools, layer3Tools, layer5Tools, tools };
+//初始化ai工具
+const InitName = ["Init_Player"];
+
+const InitTools = tools.filter((tool) => {
+  return InitName.includes(tool.function.name);
+});
+
+module.exports = {
+  layer1Tools,
+  layer2Tools,
+  layer3Tools,
+  layer5Tools,
+  InitTools,
+  tools,
+};

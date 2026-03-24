@@ -9,6 +9,7 @@ export const usePlayerStore = defineStore("Player", {
     age: 16,
     max_age: 80,
     level: "炼气期三层",
+    background: "无",
     numerical_cultivation: "309/400",
     spiritual_root_type: "火_水_木",
     spiritual_root_grade: "三灵根",
@@ -16,25 +17,12 @@ export const usePlayerStore = defineStore("Player", {
     potential: "10/20", //根骨
     fortune: "9/20", //气运
     comprehension: "15/20", //悟性
-    cultivation_technique: [
-      { name: "练气决", grade: "黄阶下品" },
-      {
-        name: "天衍决",
-        grade: "天阶中品",
-      },
-    ],
-    core_cultivation_method: {
-      name: "天衍决",
-      grade: "天阶中品",
-    },
-    combat_technique: [
-      { name: "八极崩", grade: "玄阶下品", level: "大成" },
-      { name: "大荒囚天指", grade: "地阶中品", level: "圆满" },
-    ],
-    movement_technique: [
-      { name: "踏雪无痕", grade: "玄阶下品", level: "大成" },
-    ],
-    other_technique: [{ name: "探测术", grade: "黄阶下品", level: "小成" }],
+    talent: [],
+    cultivation_technique: [],
+    core_cultivation_method: {},
+    combat_technique: [],
+    movement_technique: [],
+    other_technique: [],
   }),
   actions: {
     add_Cultivation_Technique(obj) {
