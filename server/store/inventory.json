@@ -1,19 +1,24 @@
 {
   "data": [
     {
-      "mount": 1,
-      "name": "烟隐剑",
-      "value": 300
+      "name": "基础灵石",
+      "value": 10,
+      "mount": 5
     },
     {
-      "mount": 5,
-      "name": "中品灵石",
-      "value": 5
+      "name": "补气丹",
+      "value": 75,
+      "mount": 2
     },
     {
-      "mount": 3,
-      "name": "恢复丹",
-      "value": 200
+      "name": "宗门护符",
+      "value": 100,
+      "mount": 1
+    },
+    {
+      "name": "英勇卷轴",
+      "value": 50,
+      "mount": 1
     }
   ]
 }

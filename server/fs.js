@@ -216,7 +216,28 @@ function Add_AiItems(name) {
     JSON.stringify(new_items, null, 2),
     "utf8",
   );
-  return;
+}
+
+//======================================🔴读取状态机
+const State_mid = fs.readFileSync("./store/user_StateMachina.json", "utf8");
+const StateMachina = JSON.parse(State_mid);
+
+function ChangePlot(newPlot) {
+  StateMachina.Plot = newPlot;
+  fs.writeFileSync(
+    "./store/user_StateMachina.json",
+    JSON.stringify(StateMachina, null, 2),
+    "utf8",
+  );
+}
+
+function ChangeLocation(newLocation) {
+  StateMachina.now_location = newLocation;
+  fs.writeFileSync(
+    "./store/user_StateMachina.json",
+    JSON.stringify(StateMachina, null, 2),
+    "utf8",
+  );
 }
 
 //======================================🔴函数测试
@@ -232,6 +253,9 @@ module.exports = {
   history,
   AllData,
   new_items,
+  StateMachina,
+  ChangeLocation,
+  ChangePlot,
   Add_AiItems,
   add_Cultivation_Technique,
   add_Technique,

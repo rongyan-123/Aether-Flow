@@ -1,4 +1,6 @@
+const { pipeline } = require("chromadb-default-embed");
 const { InitTools } = require("./aitools");
+const { ChromaClient } = require("chromadb");
 
 //世界观设定
 const World_Rule = `
@@ -79,6 +81,19 @@ const LLM = "gpt-3.5-turbo";
 
 //===================================================================
 async function Init_AI(userInformation) {
+  //rag检索准备,此处是查询函数
+  console.log("正在加载模型...");
+  const embedder = await pipeline(
+    "feature-extraction",
+    "Xenova/bge-small-zh-v1.5",
+  );
+  console.log("模型加载完成");
+  //此处是chromaDB向量数据库的服务器
+  console.log("正在加载rag向量数据库");
+  const client = new ChromaClient({ path: "http://localhost:1111" });
+  //此处是集合(修仙设定)
+  const collection = await client.getCollection({ name: "cultivation" });
+  console.log("rag向量数据库已完成");
   console.log("成功进入Init_AI");
   console.log("用户信息为:", userInformation);
   try {
@@ -90,20 +105,21 @@ async function Init_AI(userInformation) {
     【参考信息】
   用户信息：${JSON.stringify(userInformation, null, 2)}
   【核心任务】
-调用三次工具Init_Player, 生成三个修仙开局模板，每个模板需包含以下要素：
-模板名称：简洁概括，例如“散修开局”、“宗门弟子”、“世家子弟”、“魔修后裔”、“机缘眷顾”等，需体现该模板的核心特点。
-背景描述：用一段话（约30-50字）简述该模板的出身、初始处境和故事背景，为后续剧情埋下伏笔。
-初始背包：包含若干物品，每个物品应有名称、价值（以灵石为单位，整数）、数量（整数）。物品需符合修仙世界观，如法器、丹药、材料、灵石等，数量和价值需合理，避免开局过于强大或贫瘠。
-初始面板：包含以下基础属性，数值需符合修仙设定且彼此协调,具体可查看工具.
-境界：起始境界，通常为炼气期某一层（如“炼气期一层”）。
-修为：格式为“当前值/上限值”，例如“0/200”（炼气期每层200修为）。请注意,这里尽量低,越低越好
-灵根类型：如“天灵根”、“变异灵根”、“双灵根”、“三灵根”、“伪灵根”等，需符合模板背景。
-灵根等级：如“一品”、“二品”或更具体的品阶，若无则填“无”。
-灵力：格式“当前值/上限值”，例如“100/100”。
-根骨：数值范围0-20，影响修炼速度和突破成功率。  
-气运：数值范围0-20，影响机缘和事件结果。
-悟性：数值范围0-20，影响功法学习速度和熟练度。
-可选额外属性：如功法、战技、身法等，但非必须，可酌情添加。
+1,调用三次工具Init_Player, 生成三个修仙开局模板，每个模板需包含以下要素：
+  模板名称：简洁概括，例如“散修开局”、“宗门弟子”、“世家子弟”、“魔修后裔”、“机缘眷顾”等，需体现该模板的核心特点。
+  背景描述：用一段话（约30-50字）简述该模板的出身、初始处境和故事背景，为后续剧情埋下伏笔。
+  初始背包：包含若干物品，每个物品应有名称、价值（以灵石为单位，整数）、数量（整数）。物品需符合修仙世界观，如法器、丹药、材料、灵石等，数量和价值需合理，避免开局过于强大或贫瘠。
+  初始面板：包含以下基础属性，数值需符合修仙设定且彼此协调,具体可查看工具.
+  境界：起始境界，通常为炼气期某一层（如“炼气期一层”）。
+  修为：格式为“当前值/上限值”，例如“0/200”（炼气期每层200修为）。请注意,这里尽量低,越低越好
+  灵根类型：如“天灵根”、“变异灵根”、“双灵根”、“三灵根”、“伪灵根”等，需符合模板背景。
+  灵根等级：如“一品”、“二品”或更具体的品阶，若无则填“无”。
+  灵力：格式“当前值/上限值”，例如“100/100”。
+  根骨：数值范围0-20，影响修炼速度和突破成功率。  
+  气运：数值范围0-20，影响机缘和事件结果。
+  悟性：数值范围0-20，影响功法学习速度和熟练度。
+  可选额外属性：如功法、战技、身法等，但非必须，可酌情添加。
+2,根据对应背景background,调用工具Generate_Location,生成用户所在的初始地点
   【注意事项】
 1, 调用三次 Init_Player 工具，每次传入一个完整的模板。player_data 必须包含所有指定字段（姓名、年龄、性别等），
 2, player_inventory 必须是非空数组。
@@ -111,10 +127,11 @@ async function Init_AI(userInformation) {
   - player_data: 包含 name, age, gender, background, level, cultivation, spiritual_root_type, spiritual_root_grade, spiritual_power, potential, fortune, comprehension, talent, technique, combat_skill, movement_skill
   - player_inventory: 一个非空数组，每个物品包含 name, value, mount
   注意：所有字段都必须有值，不得省略。
-
+4,调用Generate_Location时,一定要确保和Init_Player同步,不要出现角色背景中的地点和创建的地点不同这种情况
 
   【可使用的工具】
-Init_Player
+初始化面板和背包Init_Player
+生成地图Generate_Location
 
 【生成要求】
 多样性：三个模板应各有侧重，例如一个偏战斗、一个偏修炼、一个偏机缘，或一个散修、一个宗门、一个世家等，确保用户有不同选择。
@@ -176,6 +193,7 @@ Init_Player
         const toolname = tool.function.name;
         const toolArg = JSON.parse(tool.function.arguments);
         count++;
+        //
         if (toolname === "Init_Player") {
           console.log("成功进入初始化面板");
           console.log("当前是第", count, "次调用Init_Player工具");
@@ -190,6 +208,33 @@ Init_Player
             player_data: toolArg.player_data,
             player_inventory: toolArg.player_inventory,
           });
+        }
+        //创建地图
+        if (toolname === "Generate_Location") {
+          console.log("成功进入地图创建");
+          console.log("当前地图为:", toolArg);
+          const level3_description = `地点名称:\n${toolArg.name}\n所在区域:\n${
+            toolArg.region
+          }\n危险等级:\n${toolArg.danger_level}\n简要描述:\n${
+            toolArg.description
+          }\n势力分布:\n${toolArg.power_distribution}\n战力范围:\n${
+            toolArg.level_range
+          }\n特殊规则:\n${toolArg.rules}\n和平状态:\n${
+            toolArg.peace_orno
+          }\n常驻人物列表:\n${JSON.stringify(
+            toolArg.inhabitants,
+          )}\n此地特有物品列表:\n${JSON.stringify(
+            toolArg.bound_items,
+          )}\n关联地点列表:\n${JSON.stringify(toolArg.bound_locations)}\n`;
+
+          const Map = {
+            id: `Map_${Date.now()}`,
+            name: toolArg.name,
+            description: level3_description,
+            metadata: {
+              power_distribution: toolArg.power_distribution,
+            },
+          };
         }
       }
     }

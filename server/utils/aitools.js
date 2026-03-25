@@ -544,10 +544,10 @@ const tools = [
           "region",
           "danger_level",
           "description",
-          "势力分布",
-          "战力范围",
-          "规则",
-          "和平状态",
+          "power_distribution",
+          "level_range",
+          "rules",
+          "peace_orno",
           "inhabitants",
           "bound_items",
           "bound_locations",
@@ -571,19 +571,19 @@ const tools = [
             description: "简要描述，包括环境、氛围、特征（不超过50字）。",
           },
           // 详细属性
-          势力分布: {
+          power_distribution: {
             type: "string",
             description: "主要势力（宗门、家族、魔修等）及关系。",
           },
-          战力范围: {
+          level_range: {
             type: "string",
             description: "此地常见修士的境界范围（如炼气～元婴）。",
           },
-          规则: {
+          rules: {
             type: "string",
             description: "特殊规则（如禁止斗法、魔气弥漫等）。",
           },
-          和平状态: {
+          peace_orno: {
             type: "string",
             enum: ["和平", "冲突", "战争", "混乱"],
             description: "当前局势。",
@@ -690,7 +690,7 @@ const tools = [
     },
   },
 
-  ///
+  //修改状态机
 
   //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴游戏初始化ai专用
 
@@ -916,7 +916,7 @@ const layer5Tools = tools.filter((tool) => {
 });
 
 //初始化ai工具
-const InitName = ["Init_Player"];
+const InitName = ["Init_Player", "Generate_Location"];
 
 const InitTools = tools.filter((tool) => {
   return InitName.includes(tool.function.name);
