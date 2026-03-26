@@ -690,7 +690,26 @@ const tools = [
     },
   },
 
-  //修改状态机
+  //修改状态机:地图
+  {
+    type: "function",
+    function: {
+      name: "Current_Location",
+      description:
+        "更新玩家当前所在地图。当剧情中明确玩家移动到新地点时，调用此工具。",
+      parameters: {
+        type: "object",
+        required: ["location"],
+        properties: {
+          location: {
+            type: "string",
+            description:
+              "新地点的名称（必须与已生成的地图名称一致，如“XX地点坊市”、“青云宗”）",
+          },
+        },
+      },
+    },
+  },
 
   //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴游戏初始化ai专用
 
@@ -901,6 +920,7 @@ const layer3Tools = tools.filter((tool) => {
   return layer3Names.includes(tool.function.name);
 });
 
+//第五层
 const layer5Names = [
   "Backpack_additems",
   "Skip",
@@ -909,6 +929,7 @@ const layer5Names = [
   "PlayerStats_AddTechnique",
   "Technique_Add",
   "Check_Breakthrough",
+  "Current_Location",
 ];
 
 const layer5Tools = tools.filter((tool) => {
@@ -916,7 +937,7 @@ const layer5Tools = tools.filter((tool) => {
 });
 
 //初始化ai工具
-const InitName = ["Init_Player", "Generate_Location"];
+const InitName = ["Init_Player"];
 
 const InitTools = tools.filter((tool) => {
   return InitName.includes(tool.function.name);

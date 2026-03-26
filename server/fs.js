@@ -8,7 +8,9 @@ const PlayerData = JSON.parse(rawData);
 function query_playerStats() {
   console.log("进入读取面板工具");
   console.log("面板如下:", PlayerData);
-  return `用户面板如下:${JSON.stringify(PlayerData, null, 2)}`;
+  const raw = fs.readFileSync("./store/PlayerData.json", "utf8");
+  const player = JSON.parse(raw);
+  return `用户面板如下:${JSON.stringify(player, null, 2)}`;
 }
 
 //💡2,增加修炼功法
@@ -110,9 +112,10 @@ console.log("成功读取背包");
 function query_backpack() {
   console.log("进入读取背包工具");
   console.log("背包内物品如下:", backpack);
+  const raw = fs.readFileSync("./store/inventory.json", "utf8");
+  const backpack = JSON.parse(raw);
   return `背包内物品如下:${JSON.stringify(backpack, null, 2)}`;
 }
-
 //💡2,增加物品函数
 function addItem(obj) {
   console.log("成功进入添加物品工具");
@@ -218,7 +221,7 @@ function Add_AiItems(name) {
   );
 }
 
-//======================================🔴读取状态机
+//======================================🔴状态机
 const State_mid = fs.readFileSync("./store/user_StateMachina.json", "utf8");
 const StateMachina = JSON.parse(State_mid);
 
@@ -232,12 +235,39 @@ function ChangePlot(newPlot) {
 }
 
 function ChangeLocation(newLocation) {
+  const finder = Maps.find((m) => m.name === newLocation);
+  if (finder) {
+    console.log("成功找到当前地图!", finder);
+    StateMachina.now_location = finder;
+    console.log("状态机已更新!");
+  } else {
+    console.log(
+      "抱歉,更新状态机时,没有找到地图,地图状态更新失败,这是地图名:",
+      newLocation,
+    );
+  }
+
   StateMachina.now_location = newLocation;
   fs.writeFileSync(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
+}
+
+//======================================🔴读取地图
+const map_mid = fs.readFileSync("./store/Maps.json", "utf8");
+const Maps = JSON.parse(map_mid);
+
+//新增地图
+function AddMaps(new_map) {
+  console.log(
+    "进入fs文件中的地图修改函数AddMaps,这是读取到的地图,请检查其是否为对象:",
+    new_map,
+  );
+
+  Maps.push(new_map);
+  fs.writeFileSync("./store/Maps.json", JSON.stringify(Maps, null, 2), "utf8");
 }
 
 //======================================🔴函数测试
@@ -254,6 +284,8 @@ module.exports = {
   AllData,
   new_items,
   StateMachina,
+  Maps,
+  AddMaps,
   ChangeLocation,
   ChangePlot,
   Add_AiItems,

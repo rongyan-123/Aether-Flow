@@ -2,14 +2,30 @@
   "name": "王德发",
   "age": 20,
   "gender": "男",
-  "background": "王德发出生于中等宗门，天赋尚可，但始终无法突破基础，他希望能找到秘密助力修为。",
+  "background": "作为一名宗门弟子，王德发从小在大宗门中长大，接受严格的修炼与教育。但他知道，只有不断提升实力，才能在这弱肉强食的修仙界存活。",
   "level": "炼气期一层",
   "numerical_cultivation": "0/200",
-  "spiritual_root_type": "土灵根",
+  "spiritual_root_type": "火灵根",
   "spiritual_root_grade": "一品",
-  "spiritual_power": "40/100",
+  "spiritual_power": "40/40",
   "potential": "15/20",
   "fortune": "8/20",
-  "comprehension": "14/20",
-  "talent": "无"
+  "comprehension": "12/20",
+  "talent": [
+    "炼器天赋"
+  ],
+  "combat_technique": [
+    {
+      "name": "火焰剑法",
+      "grade": "玄阶下品",
+      "level": "初入"
+    }
+  ],
+  "movement_technique": [
+    {
+      "name": "迅影步",
+      "grade": "玄阶下品",
+      "level": "初入"
+    }
+  ]
 }

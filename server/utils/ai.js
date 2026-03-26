@@ -15,6 +15,8 @@ const {
   PlayerData,
   StateMachina,
   ChangePlot,
+  AddMaps,
+  ChangeLocation,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
@@ -331,10 +333,9 @@ ${World_Rule}
           Proceed = toolArg.judgment;
           console.log("Proceed:", Proceed);
         }
-
-        console.log("当前QueryResult内容:", QueryResult);
       }
       console.log("查询结束");
+      console.log("当前QueryResult内容:", QueryResult);
     }
   } catch (error) {
     console.log("第一层出错了", error);
@@ -728,15 +729,21 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           if (toolname === "Generate_Location") {
             console.log("进入生成地图工具");
             console.log("ai生成结果为:", toolArg);
-            const level3_description = `地点名称:\n${toolArg.name}\n所在大陆或地区:\n${toolArg.region}\n
-            危险等级:\n${toolArg.danger_level}\n简要描述，包括环境、氛围、特征:\n${toolArg.description}\n
-            势力分布:\n${toolArg.势力分布}\n
-            战力范围:\n${toolArg.战力范围}\n规则:\n${toolArg.规则}
-            和平状态:\n${toolArg.和平状态}\n
-            常驻或关键人物名称列表:\n${toolArg.bound_items}\n
-            此地特有的重要物品名称列表:\n${toolArg.和平状态}\n
-            包含的子区域或关联地点:\n${toolArg.bound_locations}\n
-            `;
+            const level3_description = `地点名称:\n${
+              toolArg.name
+            }\n所在区域:\n${toolArg.region}\n危险等级:\n${
+              toolArg.danger_level
+            }\n简要描述:\n${toolArg.description}\n势力分布:\n${
+              toolArg.power_distribution
+            }\n战力范围:\n${toolArg.level_range}\n特殊规则:\n${
+              toolArg.rules
+            }\n和平状态:\n${
+              toolArg.peace_orno
+            }\n常驻人物列表:\n${JSON.stringify(
+              toolArg.inhabitants,
+            )}\n此地特有物品列表:\n${JSON.stringify(
+              toolArg.bound_items,
+            )}\n关联地点列表:\n${JSON.stringify(toolArg.bound_locations)}\n`;
             const newMap = {
               id: `Item_${Date.now()}`,
               name: toolArg.name,
@@ -755,7 +762,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                   toolArg.bound_locations && toolArg.bound_locations.length > 0
                     ? toolArg.bound_locations
                     : ["无"],
-                势力分布: toolArg.势力分布 || "未知", // 字符串字段可设默认值
+                power_distribution: toolArg.power_distribution || "未知", // 字符串字段可设默认值
               },
             };
 
@@ -779,7 +786,8 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
             console.log("成功放入向量数据库");
 
             console.log("此为ai生成的地图:", level3_description);
-
+            //存入地图数据,存整个对象,而非单纯的名字
+            AddMaps(toolArg);
             //只将名字放入实体数组
             Add_AiItems(toolArg.name);
             //在工具的返回中加入一个日志
@@ -826,11 +834,11 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 5. 如果用户有某种需求,请在下一段剧情中加入对应的需求,而不是当场拟定一个剧情让用户参与,这样太假了,毫无铺垫,毫无代入感,这个时候你可以根据搜索结果阐述和解释一下他的需求,而非直接拟定剧情
 6. 绝对不自己拟定剧情,没有出现的剧情不要乱加,最多只允许修改原剧情中的一些变量,细节.
 7. 如果此值Game_start:${Game_start}为false,你的回复语句则需要有所改变,说明游戏在启动阶段,你需要改为符合开头的回复:
-  a(最重要),迅速抛出引人入胜的剧情,把生成的剧情拆分,让用户进入到当前剧情中,让用户做选择,代入感要强
+  a(最重要),开头先给出场景描写,然后迅速接入剧情,把生成的剧情拆分,让用户进入到当前剧情中,让用户做选择,代入感要强
   b,你需要告诉用户目前是什么状况,起到引导作用
-  
-
 8. 如果剧情Plot和面板背包数据等等,信息不同步,需要你进行纠正,比如境界出现bug,面板是炼气期3层,结果剧情中是炼气期6层,需要你纠正
+9. 如果用户的行动导致地点变化，请在推演结果中明确用‘你来到了XXX’或‘你离开XXX前往YYY’这样的句子描述。
+
 【输出要求】
 - 生成一段修仙风格的自然语言回复，称呼用户为「道友」。
 - 回复中必须明确提及所有发生的变化（如灵力消耗、物品使用、状态改变），必须具体，以便第五层解读。
@@ -847,7 +855,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 
 那赵磊面生横肉，看见你腰间悬着的苍穹剑眼睛瞬间就直了。
 
-一口唾沫啐在脚边，嗤笑道：
+他一口唾沫啐在脚边，嗤笑道：
 
 “散修也配来我玄剑门碰运气？识相的把你手里的剑留下，爷爷我还能给你留个全尸！”
 
@@ -923,11 +931,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
     console.log("检查是否有 tool_calls：", AiReply.tool_calls);
     level4_Replay = AiReply.content;
     console.log("toolResult==", toolResult);
-    //游戏初始化的时候,不需要第五层,因为面板和背包全部准备好了已经
-    if (Game_start === true) {
-      //异步执行
-      layer5(level4_Replay, userInput);
-    }
+
+    //异步执行
+    layer5(level4_Replay, userInput);
+
     //再返回,此时第五层才执行,不耽误返回时间
     console.timeEnd("至第四层结束时的总耗时");
     return level4_Replay;
@@ -951,7 +958,7 @@ async function layer5(level4_Replay, userInput) {
 3.  根据解析出的变化，从【可用工具列表】中选择对应的工具执行（可能需要多次调用，例如同时添加物品和修改修为）；
 4.  有些信息也许比较隐晦,需要你多多思考,比如有时候出现"增加些许灵石",你可以自行判断增加多少.
 5.  请注意推敲+分辨第四层的用词,究竟有没有给出绝对的陈述句,比如"消耗","使用"等等此类绝对的动词,如果只是询问用户,"如果","若"此类假设语句,那么说明此句话没有消耗物品,那么你就继续阅读下一句,注意分辨用词
-
+6.  读取所有信息后,如果发现,角色的地图有所改变,请调用工具Current_Location,仔细阅读前文,找到一个最有可能的当前地图即可,这一点主要是修改角色状态机,保证其所处地点时刻正确,其他ai不会读取出错
 
 【输入上下文】
 ---
@@ -975,6 +982,7 @@ ${userInput}
 增加技艺: Technique_Add
 判断突破是否成功: Check_Breakthrough
 生成物品: Generate_Items
+修改当前角色所处的地图:Current_Location
 ---
 
 【强制执行规则】
@@ -1148,6 +1156,13 @@ ${userInput}
           console.log("ai给出原因为", toolArg.reason);
           console.log("使用[跳过]工具,以下是ai给出的缘由", toolArg.reason);
           continue;
+        }
+
+        //状态机:地图
+        if (toolname === "Current_Location") {
+          console.log("进入修改地图状态机的工具");
+          console.log("修改的新地图为:", toolArg.location);
+          ChangeLocation(toolArg.location);
         }
 
         //突破

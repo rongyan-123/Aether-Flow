@@ -1,23 +1,18 @@
 {
   "data": [
     {
-      "name": "基础灵石",
-      "value": 10,
-      "mount": 5
+      "name": "灵石",
+      "value": 100,
+      "mount": 20
     },
     {
-      "name": "补气丹",
-      "value": 75,
+      "name": "火灵根丹",
+      "value": 300,
       "mount": 2
     },
     {
-      "name": "宗门护符",
-      "value": 100,
-      "mount": 1
-    },
-    {
-      "name": "英勇卷轴",
-      "value": 50,
+      "name": "基础法器**火焰剑**",
+      "value": 500,
       "mount": 1
     }
   ]

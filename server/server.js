@@ -79,6 +79,9 @@ app.post("/api/game_start", async (req, res) => {
   res.json({ reply });
 });
 
+//每一层的阶段性反馈
+app.get("/api/stream", (req, res) => {});
+
 app.listen(PORT, () => {
   console.log("成功进入修仙界");
   console.log(`接口:http://localhost:${PORT}`);
