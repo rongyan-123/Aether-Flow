@@ -3,10 +3,11 @@ const express = require("express");
 const app = express();
 const PORT = 3000;
 const cors = require("cors");
-const { chatWithAI } = require("./utils/ai.js");
+const { chatWithAI, initRAG, layer5 } = require("./utils/ai.js");
 const { backpack, PlayerData } = require("./fs.js");
 const { Init_AI } = require("./utils/Init_ai.js");
 const fs = require("fs");
+const { Readable } = require("stream");
 
 app.use(cors()); //跨域访问需要,比如端口8081访问端口3000
 app.use(express.json()); //加了才能解析前端发送的json数据
@@ -43,6 +44,10 @@ app.post("/api/Game_Init", async (req, res) => {
 
 //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
 app.post("/api/game_start", async (req, res) => {
+  // 1. 【关键第一步】设置响应头，告诉前端这是流式输出
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
   console.log("成功进入更新后端背包和面板");
   const playerFilePath = "./store/PlayerData.json";
   const rawPlayer = fs.readFileSync(playerFilePath, "utf8");
@@ -75,14 +80,53 @@ app.post("/api/game_start", async (req, res) => {
 
   //判断游戏是否开始
   let Game_start = false;
+
   const reply = await chatWithAI(req.body.midInput, Game_start, Init_Plot);
-  res.json({ reply });
+
+  // 【核心修改】把 Web Stream 转成 Node.js Stream
+  const nodeStream = Readable.fromWeb(reply);
+  // 现在可以用 pipe 了
+  nodeStream.pipe(res);
 });
 
-//每一层的阶段性反馈
-app.get("/api/stream", (req, res) => {});
-
-app.listen(PORT, () => {
-  console.log("成功进入修仙界");
-  console.log(`接口:http://localhost:${PORT}`);
+// 【新增】专门执行第五层的接口
+app.post("/api/run-layer5", async (req, res) => {
+  try {
+    const { fullText } = req.body;
+    console.log("前端传回完整AI文本，执行第五层");
+    // 直接调用你的第五层
+    layer5(fullText);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false });
+  }
 });
+
+//每一层的阶段性反馈,使用SSE
+app.get("/api/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  console.log("SSE已启动");
+  let currentNumber = 1;
+  const timer = setInterval(() => {
+    if (currentNumber > 10) {
+      res.write("data:[DONE]\n\n"); //这里的DONE不是规则,只是一个结束的标志,可以随便改
+      clearInterval(timer);
+      res.end();
+      return;
+    }
+
+    res.write(`data: ${currentNumber}\n\n`);
+    currentNumber++;
+  }, 500);
+});
+
+const serverstart = async () => {
+  await initRAG();
+  app.listen(PORT, () => {
+    console.log("成功进入修仙界");
+    console.log(`接口:http://localhost:${PORT}`);
+  });
+};
+serverstart();

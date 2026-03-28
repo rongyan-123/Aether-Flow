@@ -13,12 +13,24 @@ export const useChatHistoryStore = defineStore("ChatHistory", {
         content: input,
       });
     },
-    assistantadd(input) {
+    assistantadd() {
       this.data.push({
         id: Date.now(),
         role: "assistant",
-        content: input,
+        content: "道友请稍安勿躁,正在生成世界",
+        loading: true,
       });
+    },
+    assistantChange(content) {
+      //对象,是可以直接用参数引用的,修改它,同样会改变原对象,跟指针差不多
+      const lastMsg = this.data[this.data.length - 1];
+      //拿到历史记录的最后一条,然后将它的content,一点点替换
+      //不过在此之前,要先把原来里面的文本全部清空,而且是只清理一次
+      if (lastMsg.loading === true) {
+        lastMsg.content = "";
+        lastMsg.loading = false;
+      }
+      lastMsg.content += content;
     },
 
     //输出历史记录

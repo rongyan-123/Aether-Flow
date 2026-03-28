@@ -193,6 +193,8 @@ const Chat = useChatHistoryStore();
 //选择模版后的执行逻辑
 async function Select_Model(item) {
   console.log("成功选择模板:", item);
+  //选择后,立刻更新历史记录,出现一个消息框
+  Chat.assistantadd();
   //1, 更新前端
   backpack.data = item.player_inventory;
   player.$patch(item.player_data); //用patch合并,直接修改可能破坏响应式,导致无法重新渲染
@@ -207,11 +209,128 @@ async function Select_Model(item) {
   }).catch((error) => {
     console.error("user_selected.vue\\Select_Model游戏开始失败:", error);
   });
-  // response 是一个 Response 对象，包含状态码、头等,只有使用json读取后,才是正儿八经的JS对象data
-  const data = await response.json();
-  console.log("最终回复为:", data.reply);
-  //将对应ai回复输送到历史记录中,为下次回答做准备
-  Chat.assistantadd(data.reply);
+  // // response 是一个 Response 对象，包含状态码、头等,只有使用json读取后,才是JS对象,即data
+  // const data = await response.json();
+  // console.log("最终回复为:", data.reply);
+
+  ///流式输出
+
+  //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
+  const reader = await response.body.getReader();
+  //解码器,作用是解析reader这个二进制的数据
+  const decoder = new TextDecoder();
+  // 👇收集完整AI回复
+  let fullAIText = "";
+  //避免报错
+  let running = true;
+  while (running) {
+    //read()是一个异步函数,返回的是promise,作用是持续读取数据,没数据就等待,直到结束
+    //返回值就两个,done和value
+    const { done, value } = await reader.read();
+    if (done) {
+      console.log("流式传输结束");
+      // 👇 传输完成，调用后端第五层
+      try {
+        const res = await fetch("http://localhost:3000/api/run-layer5", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullText: fullAIText }),
+        });
+        const data = await res.json();
+        console.log("✅ 第五层执行结果：", data);
+      } catch (err) {
+        console.error("❌ 调用第五层失败：", err);
+      }
+      break;
+    }
+    //解析二进制数据,最后的stream是指流式输出
+    const chunk = decoder.decode(value, { stream: true });
+    // 👇 拼接完整文本
+    fullAIText += chunk;
+    //将输出按照特定解析分开
+    const packet = chunk.split("\n\n");
+    for (const item of packet) {
+      //排除空选项
+      if (!item.trim()) continue;
+      //判断前6个字符是否正确
+      if (item.startsWith("data: ")) {
+        const content = item.slice(6);
+        console.log("流式传输中:", content);
+
+        //我们自己的业务逻辑：判断是不是结束标记
+        if (content === "[DONE]") {
+          console.log("收到我们自己定义的结束标记，不处理了");
+          continue;
+        }
+        try {
+          // 6. 【关键第三步】现在 content 是纯 JSON 了，可以 parse 了
+          const data = JSON.parse(content);
+
+          // 7. 提取出真正的文本内容（不同大模型 API 的路径可能略有不同）
+          // 通常是在 choices[0].delta.content 这里
+          const contents = data.choices?.[0]?.delta?.content || "";
+
+          if (contents) {
+            console.log("提取到的文本:", contents);
+            // 8. 推给前端（记得也要加 data: 前缀和 \n\n 后缀）
+            //res.write(`data: ${contents}\n\n`);
+            Chat.assistantChange(contents);
+          }
+        } catch (parseError) {
+          console.error("解析 JSON 失败:", parseError, "原始字符串:", content);
+        }
+      }
+    }
+  }
+
+  //出现回复后,立刻将其替换到消息框中
+
+  //  try {
+  //   const response = await fetch("http://localhost:3000/api/stream", {
+  //     method: "GET",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
+  //   //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
+  //   const reader = response.body.getReader();
+  //   console.log("拿到 reader 了:", reader); //reader是二进制数据,需要一直解码
+  //   //解码器,作用是解析reader这个二进制的数据
+  //   const decoder = new TextDecoder();
+  //   //避免报错
+  //   let running = true;
+  //   while (running) {
+  //     //read()是一个异步函数,返回的是promise,作用是持续读取数据,没数据就等待,直到结束
+  //     //返回值就两个,done和value
+  //     const { done, value } = await reader.read();
+  //     if (done) {
+  //       console.log("已结束");
+  //       break;
+  //     }
+  //     //解析二进制数据,最后的stream是指流式输出
+  //     const chunk = await decoder.decode(value, { stream: true });
+  //     console.log("解码后的文本片段:", chunk);
+  //     const packet = chunk.split("\n\n");
+
+  //     for (const item of packet) {
+  //       //排除空选项
+  //       if (!item.trim()) continue;
+  //       //判断前6个字符是否正确
+  //       if (item.startsWith("data: ")) {
+  //         const content = item.slice(6);
+  //         console.log("流式读取的内容为:", content);
+
+  //         //我们自己的业务逻辑：判断是不是结束标记
+  //         if (content === "[DONE]") {
+  //           console.log("收到我们自己定义的结束标记，不处理了");
+  //           continue;
+  //         }
+  //       }
+  //     }
+  //   }
+  // } catch (error) {
+  //   console.log(error);
+  // }
 
   console.log("后端已同步更改");
 }

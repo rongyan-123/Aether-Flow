@@ -7,7 +7,6 @@ const PlayerData = JSON.parse(rawData);
 //💡1,读取面板
 function query_playerStats() {
   console.log("进入读取面板工具");
-  console.log("面板如下:", PlayerData);
   const raw = fs.readFileSync("./store/PlayerData.json", "utf8");
   const player = JSON.parse(raw);
   return `用户面板如下:${JSON.stringify(player, null, 2)}`;
@@ -111,7 +110,6 @@ console.log("成功读取背包");
 //💡1, 查询背包
 function query_backpack() {
   console.log("进入读取背包工具");
-  console.log("背包内物品如下:", backpack);
   const raw = fs.readFileSync("./store/inventory.json", "utf8");
   const backpack = JSON.parse(raw);
   return `背包内物品如下:${JSON.stringify(backpack, null, 2)}`;

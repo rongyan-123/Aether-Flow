@@ -1,5 +1,14 @@
 const { pipeline, env } = require("chromadb-default-embed");
+const { ChromaClient } = require("chromadb");
+const {
+  layer1Tools,
+  layer2Tools,
+  layer3Tools,
+  layer5Tools,
+} = require("./aitools");
+//关闭自动寻找模型地址
 env.allowRemoteModels = false;
+//下载到本地的embedding模型
 env.localModelPath = "D:/xiuxian/xiuxian/server/models";
 const {
   history,
@@ -22,13 +31,23 @@ const {
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
 //import { queryName } from "@/StaticData/AllData";
 //import { usePlayerStore } from "@/stores/player";
-const {
-  layer1Tools,
-  layer2Tools,
-  layer3Tools,
-  layer5Tools,
-} = require("./aitools");
-const { ChromaClient } = require("chromadb");
+// 1. 全局变量：只加载一次
+let embedder;
+let collection;
+const initRAG = async () => {
+  //rag检索准备,此处是查询函数
+  console.log("正在加载模型...");
+  embedder = await pipeline("feature-extraction", "Xenova/bge-small-zh-v1.5");
+  console.log("模型加载完成");
+  const client = new ChromaClient({ path: "http://localhost:1111" });
+  //此处是集合(修仙设定)
+  collection = await client.getCollection({ name: "cultivation" });
+  console.log("rag向量数据库已完成");
+};
+
+//此处是chromaDB向量数据库的服务器
+console.log("正在加载rag向量数据库");
+
 //chatGPT地址
 // 原 API 地址
 //const API_URL = "https://api.chatanywhere.tech/v1/chat/completions";
@@ -69,23 +88,9 @@ const LLM = "doubao-seed-2-0-pro-260215";
 
 //该函数拿到的是ai回复,类型是字符串
 async function chatWithAI(userInput, Game_start, Init_Plot) {
-  console.time("生成耗时");
+  console.time();
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
-
-  //rag检索准备,此处是查询函数
-  console.log("正在加载模型...");
-  const embedder = await pipeline(
-    "feature-extraction",
-    "Xenova/bge-small-zh-v1.5",
-  );
-  console.log("模型加载完成");
-  //此处是chromaDB向量数据库的服务器
-  console.log("正在加载rag向量数据库");
-  const client = new ChromaClient({ path: "http://localhost:1111" });
-  //此处是集合(修仙设定)
-  const collection = await client.getCollection({ name: "cultivation" });
-  console.log("rag向量数据库已完成");
 
   //世界观设定
   const World_Rule = `
@@ -369,23 +374,7 @@ ${World_Rule}
 6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
 7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
 8. 如果此值Game_start:${Game_start}为false,同时用户背景Init_Plot:${Init_Plot}不为空,则你的行为逻辑将有所改变,你将生成一段更符合背景Init_Plot的开端剧情,只使用正叙,不要倒叙,不要插叙,请注意,目的只有一个,迅速让用户代入,让用户爽
-  生成的剧情要开头强情绪,此处给出几个开头风格,可以参考,选出最符合原背景的一条:
-  a.废柴流：主角资质极差，遭宗门/家族抛弃，后获奇遇逆袭成神。
-  b.退婚流：主角被未婚妻当众退婚，受尽羞辱，发奋修炼，最终强势打脸。
-  c.扮猪吃虎流：主角表面平庸普通，实则隐藏实力，关键时刻一鸣惊人，震惊全场。
-  d.豪强回归流：曾是顶级势力嫡系，因故流落凡间，多年后强势归来，夺回属于自己的一切。
-  e.种田流：不热衷战斗，专注炼丹、炼器、种药等辅助职业，靠技术和商业积累资本，壮大势力。
-  f.奇遇流：意外发现仙人遗迹、秘宝或神兽幼崽，获得逆天传承，从此踏上强者之路。
-  g.打脸流：主角被轻视、嘲笑、排挤，却在关键时刻展现实力，让所有看不起他的人目瞪口呆。
-  h.家破人亡流：一夜之间宗门被灭、家族覆灭，主角背负血海深仇，踏上复仇之路。
-  i.复仇流：主角曾被至交/同门陷害，身败名裂，今朝归来，誓要讨回公道。
-  j.替身流：主角被当作他人的替身，终有一天揭竿而起，挣脱枷锁，活成自己。
-  k.背锅流：主角无辜替人背黑锅，被世人唾弃，历经磨难后真相大白，还自己清白。
-  l.师徒背叛流：主角为师父/门派奉献一切，却被无情抛弃，后另有机缘，终让背叛者悔不当初。
-  m.赘婿翻身流：主角入赘世家，受尽白眼，一朝崛起，让整个家族仰望。
-  n.被逐出师门流：主角因“资质平庸”被赶出山门，后凭借毅力与机缘，成就远超师门。
-  o.宿敌流：主角与命中宿敌从少年斗到中年，一路相爱相杀，最终一决高下。  
-  请别忘记,此处要结合原背景Init_Plot,二次创作的
+
 
 9.如果原流程中就有剧情Plot:${JSON.stringify(
         StateMachina.Plot,
@@ -803,8 +792,6 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
     }
   }
 
-  //拿到第四层ai回复文本
-  let level4_Replay = "";
   //🔴 4, 进入面向用户层
   try {
     console.log("🔴 4, 进入面向用户层");
@@ -840,10 +827,11 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 9. 如果用户的行动导致地点变化，请在推演结果中明确用‘你来到了XXX’或‘你离开XXX前往YYY’这样的句子描述。
 
 【输出要求】
-- 生成一段修仙风格的自然语言回复，称呼用户为「道友」。
+- 生成一段修仙风格的自然语言回复。
 - 回复中必须明确提及所有发生的变化（如灵力消耗、物品使用、状态改变），必须具体，以便第五层解读。
 - 语言生动形象，用大白话，带古风但不要文言文。
 - 不要出现任何技术术语（如“数值”、“API”、“工具”等）。
+- 所有实体,以及重要的东西,必须使用html的各种标签进行修饰!随意使用,包括加粗,改颜色,改为h1标题格式等等,让文字看起来更易读
 - **输出格式必须严格遵循小说式分段：**
   - 每个短句或每个场景切换，都要独立成段。
   - 关键转折、情绪爆发、重要信息、选项说明，必须单独成行。
@@ -897,47 +885,19 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
       },
       body: JSON.stringify({
         model: LLM,
-        messages: level4_messages, //发送以下数据:历史记录,背包
+        messages: level4_messages,
         temperature: 0.7,
-        //stream: true, //开启流式输出
+        stream: true, //开启流式输出
         // tools: layer4Tools, //工具
         // tool_choice: "auto",
       }),
     };
     const level4_response = await fetch(API_URL, Aiconfiguration); //发送并收到回复
 
-    const level4_data = await level4_response.json(); //转为json格式
-    //判断 response.ok，先检查请求是否成功（比如 401 能提前发现）
-    if (!level4_response.ok) {
-      console.error("API 授权失败/请求错误：", level4_data.error);
-      return "抱歉，API 请求失败（请换个模型）";
-    }
-    console.log(
-      "第4次发送api结束,输入消耗token:",
-      level4_data.usage.prompt_tokens,
-    );
-    console.log(
-      "第4次发送api结束,输出消耗token:",
-      level4_data.usage.completion_tokens,
-    );
-    console.log(
-      "第4次发送api结束,总计消耗token:",
-      level4_data.usage.total_tokens,
-    );
-    //拿到回复中的有效内容
-    const AiReply = level4_data.choices[0].message;
-
-    console.log("第4层ai回复:", AiReply.content);
-    console.log("检查是否有 tool_calls：", AiReply.tool_calls);
-    level4_Replay = AiReply.content;
-    console.log("toolResult==", toolResult);
-
-    //异步执行
-    layer5(level4_Replay, userInput);
-
     //再返回,此时第五层才执行,不耽误返回时间
-    console.timeEnd("至第四层结束时的总耗时");
-    return level4_Replay;
+    console.timeEnd();
+    //此处必须返回第四层的流,而非解析后的值
+    return level4_response.body;
   } catch (error) {
     console.log("第四层出错了", error);
     return "第四层处理失败，请稍后再试。";
@@ -959,6 +919,7 @@ async function layer5(level4_Replay, userInput) {
 4.  有些信息也许比较隐晦,需要你多多思考,比如有时候出现"增加些许灵石",你可以自行判断增加多少.
 5.  请注意推敲+分辨第四层的用词,究竟有没有给出绝对的陈述句,比如"消耗","使用"等等此类绝对的动词,如果只是询问用户,"如果","若"此类假设语句,那么说明此句话没有消耗物品,那么你就继续阅读下一句,注意分辨用词
 6.  读取所有信息后,如果发现,角色的地图有所改变,请调用工具Current_Location,仔细阅读前文,找到一个最有可能的当前地图即可,这一点主要是修改角色状态机,保证其所处地点时刻正确,其他ai不会读取出错
+
 
 【输入上下文】
 ---
@@ -1182,4 +1143,10 @@ ${userInput}
   }
 }
 
-module.exports = { chatWithAI, layer5 };
+module.exports = {
+  chatWithAI,
+  layer5,
+  initRAG,
+  getEmbedder: () => embedder,
+  getCollection: () => collection,
+};

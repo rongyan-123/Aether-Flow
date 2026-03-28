@@ -5,7 +5,7 @@ import { defineStore } from "pinia";
 export const usePlayerStore = defineStore("Player", {
   state: () => ({
     //此仓库没有data,是全部放在state里面的,所以访问的时候要写.$state
-    name: "齐尘 ",
+    name: "齐尘",
     age: 16,
     max_age: 80,
     level: "炼气期三层",

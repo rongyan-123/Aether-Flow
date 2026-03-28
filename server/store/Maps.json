@@ -1,1 +1,63 @@
-[]
+[
+  {
+    "name": "玄剑门外门兑换处",
+    "region": "青玄山玄剑门",
+    "danger_level": "安全",
+    "description": "外门弟子兑换功法、资源的场所，有专人值守",
+    "power_distribution": "玄剑门外门管事直管，禁止私斗",
+    "level_range": "炼气～筑基",
+    "rules": "凭宗门贡献兑换物品，禁止喧哗打斗",
+    "peace_orno": "和平",
+    "inhabitants": [
+      "外门管事张默"
+    ],
+    "bound_items": [
+      "黄阶上品引气诀",
+      "聚气炼气丹",
+      "玄纹护体符"
+    ],
+    "bound_locations": [
+      "玄剑门资源发放处"
+    ]
+  },
+  {
+    "name": "玄剑门外门后山入口",
+    "region": "青玄山玄剑门",
+    "danger_level": "低危",
+    "description": "通往玄剑门外门后山的必经之路，树木丛生，人迹少",
+    "power_distribution": "无固定势力，偶尔有弟子路过",
+    "level_range": "炼气～筑基",
+    "rules": "无特殊规则，可自由出入",
+    "peace_orno": "和平",
+    "inhabitants": [],
+    "bound_items": [
+      "低阶灵草"
+    ],
+    "bound_locations": [
+      "玄剑门外门后山禁地",
+      "玄剑门外门弟子居所"
+    ]
+  },
+  {
+    "name": "玄剑门外门后山禁地",
+    "region": "青玄山玄剑门",
+    "danger_level": "中危",
+    "description": "外门后山深处，常年笼罩薄雾，有低级妖兽出没",
+    "power_distribution": "无主，偶尔有修士进入探寻机缘",
+    "level_range": "炼气～金丹",
+    "rules": "禁止外门弟子私自进入，内部有迷阵",
+    "peace_orno": "混乱",
+    "inhabitants": [
+      "低阶野狼妖",
+      "低阶花妖"
+    ],
+    "bound_items": [
+      "低阶灵草",
+      "筑基期修士遗留功法"
+    ],
+    "bound_locations": [
+      "玄剑门外门后山入口",
+      "玄剑山后山破庙"
+    ]
+  }
+]
