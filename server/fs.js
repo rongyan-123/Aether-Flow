@@ -253,6 +253,24 @@ function ChangeLocation(newLocation) {
   );
 }
 
+function ChangeUserInput(userinput) {
+  StateMachina.userInput = userinput;
+  fs.writeFileSync(
+    "./store/user_StateMachina.json",
+    JSON.stringify(StateMachina, null, 2),
+    "utf8",
+  );
+}
+
+function AddQueryResult(items) {
+  StateMachina.QueryResult = items;
+  fs.writeFileSync(
+    "./store/user_StateMachina.json",
+    JSON.stringify(StateMachina, null, 2),
+    "utf8",
+  );
+}
+
 //======================================🔴读取地图
 const map_mid = fs.readFileSync("./store/Maps.json", "utf8");
 const Maps = JSON.parse(map_mid);
@@ -295,4 +313,6 @@ module.exports = {
   query_playerStats,
   useradd,
   assistantadd,
+  ChangeUserInput,
+  AddQueryResult,
 };

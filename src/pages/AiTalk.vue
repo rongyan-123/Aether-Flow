@@ -23,13 +23,40 @@
 
           <!-- AI 消息：靠左 -->
           <div v-else-if="item.role === 'assistant'" class="message assistant">
+            <!-- 🔥 新增：可折叠深度思考框（修仙主题：天道推演） -->
+            <div v-if="item.thinkingText" class="thinking-box">
+              <div class="thinking-header" @click.stop="toggleThinking(item)">
+                <!-- 🔥 修复2：用函数调用，加 .stop 阻止冒泡 -->
+
+                <span class="thinking-title">🔮 天道推演过程</span>
+                <span class="thinking-toggle">
+                  {{ item.showThinking ? "收起推演" : "查看推演" }}
+                </span>
+              </div>
+              <transition name="fade">
+                <!-- ✅ 修复逻辑：只受控于 showThinking，isThinking 只控制初始展开 -->
+                <div v-show="item.showThinking" class="thinking-content">
+                  {{ item.thinkingText }}
+                </div>
+              </transition>
+            </div>
+
+            <!-- 原有剧情内容 -->
             <span v-html="parseMarkdown(item.content)"></span>
+
+            <!-- ✅ 保留：带旋转加载图标的状态提示 -->
+            <transition name="fade">
+              <div v-if="item.loading" class="ai-loading-bar">
+                <div class="loading-spinner"></div>
+                <span class="loading-text">{{ loadingText }}</span>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
 
       <!-- 输入框区域 -->
-      <Ai_Input class="bottom"></Ai_Input>
+      <Ai_Input class="bottom" @loading-Text="handleChatEvent"></Ai_Input>
     </div>
   </div>
 </template>
@@ -41,22 +68,52 @@ import { useGameStart } from "@/stores/Game_Start";
 import { marked } from "marked";
 import { ref, watch, nextTick, onMounted, onActivated } from "vue";
 const tobottom = ref(null);
+let loadingText = ref("");
 const history = useChatHistoryStore();
 //false true
 const GameStart = useGameStart();
 
-//切换选择模板界面
-function select_model() {
-  console.log("成功进入父组件中的select_model函数,切换到选择界面");
-  GameStart.ai_input = true;
-  GameStart.select = false;
+//SSE切换接口函数
+let eventSource = null;
+
+function connectSSE() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  eventSource = new EventSource("http://localhost:3000/api/stream");
+  eventSource.addEventListener("layer1", (e) => {
+    loadingText.value = e.data;
+  });
+  // 第二层
+  eventSource.addEventListener("layer2", (e) => {
+    loadingText.value = e.data;
+  });
+  // 第三层
+  eventSource.addEventListener("layer3", (e) => {
+    loadingText.value = e.data;
+  });
+  // 第四层
+  eventSource.addEventListener("layer4", (e) => {
+    loadingText.value = e.data;
+  });
 }
 
-//切换到聊天界面
+function handleChatEvent() {
+  connectSSE();
+}
+
+//输入结束,切换选择模板界面
 function Game_start() {
   GameStart.select = true;
   GameStart.game_start = false;
-  console.log("成功进入父组件中的Game_start函数,切换到聊天界面");
+}
+
+//选择结束,切换到聊天界面
+function select_model() {
+  GameStart.ai_input = true;
+  GameStart.select = false;
+  connectSSE();
 }
 
 //滚动逻辑
@@ -67,6 +124,14 @@ const scrollToBottom = () => {
     }
   });
 };
+
+// 🔥 界面修复：切换思考框显示状态
+function toggleThinking(item) {
+  if (item.showThinking === undefined) {
+    item.showThinking = true; // 初始展开
+  }
+  item.showThinking = !item.showThinking;
+}
 
 watch(
   () => history.data,
@@ -307,5 +372,146 @@ h1 {
   box-shadow: 0 -2px 8px rgba(92, 61, 46, 0.08);
   position: relative;
   z-index: 1;
+}
+
+/* AI 消息下方的加载状态条 */
+.ai-loading-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* 旋转加载图标 */
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid #409eff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 渐入渐出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+/* 🔥 新增：深度思考框样式 - 修仙古风主题 */
+.thinking-box {
+  margin: 8px 0 16px 0;
+  border: 1px solid #c9a87c;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fdf8ef 0%, #f8f0e3 100%);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.1);
+}
+
+.thinking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f8f0e3 0%, #f0e4d0 100%);
+  font-size: 13px;
+  color: #7a5230;
+  user-select: none;
+  border-bottom: 1px solid #e0d0b8;
+  transition: background 0.2s ease;
+}
+
+.thinking-header:hover {
+  background: linear-gradient(180deg, #f0e4d0 0%, #e8d4b8 100%);
+}
+
+.thinking-title {
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.thinking-toggle {
+  color: #8b5a2b;
+  font-size: 12px;
+}
+
+.thinking-content {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #665544;
+  line-height: 1.8;
+  background-color: #fffbf5;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+  /* 古风滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: #c9a87c #f8f0e3;
+}
+
+.thinking-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.thinking-content::-webkit-scrollbar-track {
+  background: #f8f0e3;
+}
+
+.thinking-content::-webkit-scrollbar-thumb {
+  background: #c9a87c;
+  border-radius: 2px;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+/* 🔥 优化：加载状态条样式适配古风 */
+.ai-loading-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #f8f0e3 0%, #f5e6d3 100%);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #7a5230;
+  border: 1px solid #e0d0b8;
+}
+
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e0d0b8;
+  border-top: 2px solid #8b5a2b;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  flex-shrink: 0;
 }
 </style>

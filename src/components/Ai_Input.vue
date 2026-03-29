@@ -16,11 +16,12 @@ import { useInventoryStore } from "@/stores/Inventory";
 import { usePlayerStore } from "@/stores/player";
 import { eventBus } from "@/utils/eventBus";
 import { onMounted, onUnmounted, ref } from "vue";
+import { defineEmits } from "vue";
 const Chat = useChatHistoryStore();
 const backpack = useInventoryStore();
 const player = usePlayerStore();
 const userInput = ref("");
-
+const emit = defineEmits(["loading-Text"]);
 //获取游戏开始时,用户选择的数据
 let userInformation = "无";
 
@@ -39,7 +40,7 @@ function handler(data) {
 //发送到后端的函数
 async function sendHistory() {
   console.log("检查用户输入", userInformation);
-
+  emit("loading-Text");
   //非空检查
   const check = userInput.value.trim();
   if (!check) {
@@ -59,23 +60,86 @@ async function sendHistory() {
   // 清空输入框,这样中间量就不会消失
   userInput.value = "";
 
-  try {
-    const response = await fetch("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ midInput }),
-    });
-    const data = await response.json(); //需要await
-    console.log("最终回复为:", data.final_res.reply);
-    //将对应ai回复输送到历史记录中,为下次回答做准备
-    Chat.assistantadd(data.final_res.reply);
-    //更新背包和面板
-    backpack.data = data.final_res.inventory;
-    player.$state = data.final_res.PlayerData;
-  } catch (error) {
-    console.log("AI_input//sendhistory发送数据时出现", error);
+  const response = await fetch("http://localhost:3000/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ midInput }),
+  });
+  ///流式输出
+  //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
+  const reader = await response.body.getReader();
+  //解码器,作用是解析reader这个二进制的数据
+  const decoder = new TextDecoder();
+  // 👇收集完整AI回复
+  let fullAIText = "";
+  //避免报错
+  let running = true;
+  while (running) {
+    //read()是一个异步函数,返回的是promise,作用是持续读取数据,没数据就等待,直到结束
+    //返回值就两个,done和value
+    const { done, value } = await reader.read();
+    if (done) {
+      console.log("流式传输结束");
+      // 👇 传输完成，调用后端第五层
+      try {
+        const res = await fetch("http://localhost:3000/api/run-layer5", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullText: fullAIText }),
+        });
+        const data = await res.json();
+        console.log("✅ 第五层执行结果(此处应该是背包和面板)：", data);
+        console.log("直接替换前端的背包和面板");
+        backpack.data = data.reply.backpack;
+        player.$state = data.reply.PlayerData;
+      } catch (err) {
+        console.error("❌ 调用第五层失败：", err);
+      }
+      break;
+    }
+    //解析二进制数据,最后的stream是指流式输出
+    const chunk = decoder.decode(value, { stream: true });
+    // 👇 拼接完整文本
+    fullAIText += chunk;
+    //将输出按照特定解析分开
+    const packet = chunk.split("\n\n");
+    for (const item of packet) {
+      //排除空选项
+      if (!item.trim()) continue;
+      //判断前6个字符是否正确
+      if (item.startsWith("data: ")) {
+        const content = item.slice(6);
+        console.log("流式传输中:", content);
+
+        //我们自己的业务逻辑：判断是不是结束标记
+        if (content === "[DONE]") {
+          console.log("收到我们自己定义的结束标记，不处理了");
+          continue;
+        }
+        try {
+          // 6. 【关键第三步】现在 content 是纯 JSON 了，可以 parse 了
+          const data = JSON.parse(content);
+
+          // 7. 提取出真正的文本内容（不同大模型 API 的路径可能略有不同）
+          // 通常是在 choices[0].delta.content 这里
+          const contents = data.choices?.[0]?.delta?.content || "";
+
+          if (contents) {
+            console.log("提取到的文本:", contents);
+            // 8. 推给前端（记得也要加 data: 前缀和 \n\n 后缀）
+            //res.write(`data: ${contents}\n\n`);
+            Chat.assistantChange(contents);
+          }
+          console.log("最终回复为:", fullAIText);
+          //将对应ai回复输送到历史记录中,为下次回答做准备
+          Chat.assistantadd(fullAIText);
+        } catch (parseError) {
+          console.error("解析 JSON 失败:", parseError, "原始字符串:", content);
+        }
+      }
+    }
   }
 }
 </script>

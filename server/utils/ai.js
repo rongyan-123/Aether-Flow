@@ -26,7 +26,10 @@ const {
   ChangePlot,
   AddMaps,
   ChangeLocation,
+  ChangeUserInput,
+  AddQueryResult,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
+const eventBus = require("./eventBus");
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
 //举个例子,就算你ai.js里面没有写log,当执行ai.js时,依旧会先导入fs.js,然后再调用fs.js里面的打印语句,很反直觉,明明执行的是ai文件,却也会优先执行其他文件?
 //import { queryName } from "@/StaticData/AllData";
@@ -80,20 +83,8 @@ const API_KEY = "feb774e9-0893-403e-81bf-16f969eae728";
 //const LLM = "gpt-3.5-turbo";
 const LLM = "doubao-seed-2-0-pro-260215";
 
-// ==================== 核心请求函数 ====================
-//分层如下:
-//1,数据查询层:第一次发送api,调用查询工具,获取对应数据
-//2,执行工具层:第二次发送api,根据数据选择接下来要执行的工具,比如添加物品,添加功法等等,以后的生成剧情也会在这里，战斗判断也会在这里
-//3,面向用户层:第三次发送api,读取第一层的查询结果,还有第二层的工具返回结果,给用户做出最后的总结
-
-//该函数拿到的是ai回复,类型是字符串
-async function chatWithAI(userInput, Game_start, Init_Plot) {
-  console.time();
-  console.log("成功进入chatWithAI");
-  console.log("用户问题", userInput);
-
-  //世界观设定
-  const World_Rule = `
+//世界观设定
+const World_Rule = `
     // ==============================================
 // 一、核心基调（凡人流灵魂）
 // ==============================================
@@ -138,6 +129,18 @@ async function chatWithAI(userInput, Game_start, Init_Plot) {
 // - 仙界：修仙界最终层级，道祖为天花板，掌控天地法则。
     `;
 
+// ==================== 核心请求函数 ====================
+//分层如下:
+//1,数据查询层:第一次发送api,调用查询工具,获取对应数据
+//2,执行工具层:第二次发送api,根据数据选择接下来要执行的工具,比如添加物品,添加功法等等,以后的生成剧情也会在这里，战斗判断也会在这里
+//3,面向用户层:第三次发送api,读取第一层的查询结果,还有第二层的工具返回结果,给用户做出最后的总结
+
+//该函数拿到的是ai回复,类型是字符串
+async function chatWithAI(userInput, Game_start) {
+  console.time();
+  console.log("成功进入chatWithAI");
+  console.log("用户问题", userInput);
+  ChangeUserInput(userInput);
   // 新增这行，看控制台打印了几次
   console.log(
     "=== chatWithAI 函数被触发 ===",
@@ -157,10 +160,10 @@ async function chatWithAI(userInput, Game_start, Init_Plot) {
 
   //判断是否进入第二层生成剧情
   let Proceed = "";
-
   //🔴 1, 数据查询层
   try {
     console.log("🔴 1, 进入数据查询层.");
+    eventBus.emit("ai-progress", "layer1", "正在查询世界观与设定...");
 
     //第一层ai提示词,仅使用工具:查询,判断突破
     const prompt = `
@@ -168,20 +171,6 @@ async function chatWithAI(userInput, Game_start, Init_Plot) {
 你是五层架构中的第一层,【查询与思考者】,你的**职责**是：分析用户意图,和使用各种工具对用户行为进行分析,以及查询相关设定和信息,给后续的二层和三层做信息铺垫
 
 【核心任务】
-1.  分析用户的当前行为、场景、意图；
-2.  可以多次调用查询工具,已加入rag检索,所以建议直接查询整句话,不要拆开,然后可以多次查询,同时,请务必查询相关联的多个信息,
-查询工具Query_Data一定是最高优先级调用的工具,调用其他工具前,一定要搭配调用查询工具Query_Data
-(只有一种情况不需要调用查询工具,那就是用户回复的是无意义的动作,比如开始游戏,但如果是战斗或者攻击,还是要调用查询的,因为其虽然是动作,但是有意义,需要判断双方实力等等)
-  从以下维度逐一判断是否需要查询，只要有不确定的信息，就必须调用查询工具：
-    - 【场景】：用户当前所在的地点、环境设定；
-    - 【物品】：用户提到的所有物品的价值、品阶、用途；
-    - 【规则】：当前行为涉及的修仙界规则（坊市交易、杀人夺宝、突破等）；
-    - 【设定】：用户提到的所有专有名词的设定；
-    - 【行为】：用户执行的某个行为,所关联的所有事物;
-3.  只要你认为缺少任何信息会影响后续判断，就必须调用查询工具，直到你认为信息足够为止。允许连续调用多次查询工具。
-4.  如果检测到用户当前意图是突破,立刻调用[Check_Breakthrough]工具,同时也要查询相关信息
-5.  如果用户的行为涉及到了背包内的物品,则必须调用[Query_Backpack]工具,读取背包,同时也要查询相关信息
-6.  如果实在没有任何查询和突破检查,没有任何回复,不要返回空,而是调用Skip:如果用户的发送对话,实在是让你无法调用任何工具,那就直接调用Skip工具就行,绝对不要返回空
 7.  注意,此处要根据用户意图和行为,判断是否进入第二层生成剧情,具体可以查看工具judgment_of_proceed描述
 8.  如果历史记录为空,建议调用judgment_of_proceed工具生成开头剧情
 9. 当此值Game_start:${Game_start}为false时,一定要调用judgment_of_proceed,同时此刻必须调用查询背包和面板的工具!
@@ -198,9 +187,6 @@ async function chatWithAI(userInput, Game_start, Init_Plot) {
 ---
 用户原始输入：
 ${userInput}
-
-世界观设定(底层逻辑):
-${World_Rule}
 ---
 
 【绝对禁止】
@@ -341,6 +327,8 @@ ${World_Rule}
       }
       console.log("查询结束");
       console.log("当前QueryResult内容:", QueryResult);
+      AddQueryResult(QueryResult);
+      console.log("QueryResult已经成功放入状态机中");
     }
   } catch (error) {
     console.log("第一层出错了", error);
@@ -351,46 +339,12 @@ ${World_Rule}
   if (Proceed === "yes") {
     try {
       console.log("🔴 2, 进入第二层,叙事规划层.");
+      eventBus.emit("ai-progress", "layer2", "正在生成专属剧情...");
+
       const level2_prompt = `
       【角色设定】
 你是一位修仙世界的剧情架构师，任务是根据提供的上下文,还有用户行为,用户数据，调用Generate_Plot工具，生成新剧情或修改原剧情Plot,最终得到一段符合起承转合结构的剧情大纲。
 
-【输入信息】
-你将获得以下信息，必须作为生成剧情的唯一依据：
-- 用户当前背景Init_Plot
-- 最近剧情摘要Plot（如果有,放在下面了）。
-- 用户本次行动userinput
-- 整体逻辑(世界观设定)
-- 查询结果,包括用户背包和面板
-- 当前地点,环境StateMachina.now_location
-
-【生成要求】
-0. *极度重要*:如果用户此次行为对剧情并无影响,没有什么重大决定,则调用Skip工具跳过,如仅仅是买个东西,就没必要修改原大纲
-1. 剧情必须包含完整的四部分：开端（Beginning）、发展（Continuation）、转折（Change）、结局（SummingUp），每部分用最精炼的语言描述核心事件，避免任何修饰和多余描述。
-2. 开端：直接点明用户当前需要但难以实现的目标，并立刻制造一个危机。
-3. 发展：用户解决危机并获得收获；为后续埋伏笔；加入一个小爽点；保持一段相对放松的节奏。
-4. 转折：引入一个更大的危机，同时回收之前的所有伏笔，并给用户新的希望。
-5. 结局：危机解除，用户变强并收获；有一段休憩时间；为未来剧情留下铺垫。
-6. 剧情必须与用户当前状态和意图紧密相关，所有事件应合理衔接。
-7. 可在剧情中自然提及需要后续生成的物品、人物或场景（例如“遇到一只受伤的妖兽”、“发现一株灵草”），但无需详细描述，只需留下生成线索即可。
-8. 如果此值Game_start:${Game_start}为false,同时用户背景Init_Plot:${Init_Plot}不为空,则你的行为逻辑将有所改变,你将生成一段更符合背景Init_Plot的开端剧情,只使用正叙,不要倒叙,不要插叙,请注意,目的只有一个,迅速让用户代入,让用户爽
-
-
-9.如果原流程中就有剧情Plot:${JSON.stringify(
-        StateMachina.Plot,
-        null,
-        2,
-      )},请在此基础上进行修改或拓展,而非重新创建一段全新剧情,如果为空,才重新根据背景Init_Plot创建
-10. 请仔细阅读用户面板和背包,确保剧情导致的数据变化,能对得上面板,比如境界不能错,面板写的是炼气期三层,你却在剧情中误将其当作五层等等
-11. 生成的剧情中，人物境界必须符合当前地点StateMachina.now_location的战力范围。默认为战力范围为角色境界-1至角色境界+1这个范围,比如筑基期,那就是从练气到金丹期都有,不过越高等级的人物越少.若需出现更高境界的人物，请说明其来此地的合理理由（如隐居、受伤、路过）。
-12. 生成的剧情中,npc的行为逻辑等等,都要符合当前地点的规则,行事风格等等,比如宗门内禁止斗法,私自战斗,而黑市则经常有抢劫,黑吃黑等等
-
-【逻辑铁则】
-- 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
-- 重大事件（如金丹期修士获胜、邀请主角）必须有合理铺垫或动机。
-- 战斗结果必须基于实力对比，不能出现以弱胜强（除非有特殊法宝或机缘，需在剧情中明确说明）。
-- 人物动机要清晰，不能无缘无故做出不合常理的行为。
-- 具体逻辑请务必遵照底层逻辑(世界观设定):${World_Rule}
 
 【输出格式】
 直接调用Generate_Plot工具，将各个个部分的文字填入对应参数。无需额外解释。
@@ -503,9 +457,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   }
 
   //🔴 3, 动态细节层
-  if (Proceed === "yes") {
+  if (Proceed === "no") {
     try {
       console.log("🔴 3, 进入第三层,动态细节层.");
+      eventBus.emit("ai-progress", "layer3", "正在生成动态世界...");
 
       const level3_prompt = `
       【角色】
@@ -516,7 +471,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 
 【输入】
 1, 你将获得第二层生成的完整剧情（包含开端、发展、转折、结局四个部分）。剧情中可能暗示需要新的物品、人物或地点（例如“遇到一只受伤的妖兽”、“发现一株灵草”、“进入一座废弃洞府”）。
-2, 已经存在的实体数组,如果很多实体已经存在,或是剧情中没什么重大新变量,则不需要生成
+2, 已经存在的实体数组,如果很多实体已经存在,或是剧情中没什么重大新变量,则不需要生成,直接跳过skip就行
 
 
 【任务(详细版)】
@@ -795,6 +750,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   //🔴 4, 进入面向用户层
   try {
     console.log("🔴 4, 进入面向用户层");
+    eventBus.emit("ai-progress", "layer4", "正在生成回复...");
 
     const level4_prompt = `
    【角色】
@@ -904,8 +860,8 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   }
 }
 
+//🔴 5, 工具执行层
 async function layer5(level4_Replay, userInput) {
-  //🔴 5, 工具执行层
   try {
     console.log("🔴 5, 进入工具执行层.");
 
@@ -1136,6 +1092,8 @@ ${userInput}
         }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
+      console.log("开始更新前端仓库");
+      return { backpack, PlayerData };
     }
   } catch (error) {
     console.log("第五层出现错误", error);
@@ -1149,4 +1107,5 @@ module.exports = {
   initRAG,
   getEmbedder: () => embedder,
   getCollection: () => collection,
+  World_Rule,
 };

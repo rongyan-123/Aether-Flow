@@ -167,6 +167,16 @@ import { eventBus } from "@/utils/eventBus";
 import { onMounted, onUnmounted, ref } from "vue";
 import { defineEmits } from "vue";
 
+// 🔥 封装一个通用的 JSON 检测函数
+function isValidJSON(str) {
+  try {
+    JSON.parse(str);
+    return true; // 能 parse 成功，就是合法 JSON
+  } catch (e) {
+    return false; // 报错了，就不是合法 JSON
+  }
+}
+
 const backpack = useInventoryStore();
 const player = usePlayerStore();
 
@@ -209,12 +219,8 @@ async function Select_Model(item) {
   }).catch((error) => {
     console.error("user_selected.vue\\Select_Model游戏开始失败:", error);
   });
-  // // response 是一个 Response 对象，包含状态码、头等,只有使用json读取后,才是JS对象,即data
-  // const data = await response.json();
-  // console.log("最终回复为:", data.reply);
 
   ///流式输出
-
   //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
   const reader = await response.body.getReader();
   //解码器,作用是解析reader这个二进制的数据
@@ -245,8 +251,7 @@ async function Select_Model(item) {
     }
     //解析二进制数据,最后的stream是指流式输出
     const chunk = decoder.decode(value, { stream: true });
-    // 👇 拼接完整文本
-    fullAIText += chunk;
+
     //将输出按照特定解析分开
     const packet = chunk.split("\n\n");
     for (const item of packet) {
@@ -262,16 +267,31 @@ async function Select_Model(item) {
           console.log("收到我们自己定义的结束标记，不处理了");
           continue;
         }
-        try {
-          // 6. 【关键第三步】现在 content 是纯 JSON 了，可以 parse 了
-          const data = JSON.parse(content);
 
-          // 7. 提取出真正的文本内容（不同大模型 API 的路径可能略有不同）
+        let data;
+        try {
+          //现在 content 是纯 JSON 了，可以 parse 了
+          if (isValidJSON(content)) {
+            data = JSON.parse(content);
+          } else {
+            data = content;
+          }
+
+          // 🔥 1. 提取深度思考内容，流式更新
+          const reasoning = data.choices?.[0]?.delta?.reasoning_content || "";
+          if (reasoning) {
+            console.log("AI深度思考:", reasoning);
+            Chat.deepThinking(reasoning);
+          }
+          // 🔥 2. 提取正式剧情内容，和之前逻辑一致
+          // 提取出真正的文本内容（不同大模型 API 的路径可能略有不同）
           // 通常是在 choices[0].delta.content 这里
           const contents = data.choices?.[0]?.delta?.content || "";
 
           if (contents) {
             console.log("提取到的文本:", contents);
+            // 👇 拼接完整文本
+            fullAIText += content;
             // 8. 推给前端（记得也要加 data: 前缀和 \n\n 后缀）
             //res.write(`data: ${contents}\n\n`);
             Chat.assistantChange(contents);
@@ -282,55 +302,6 @@ async function Select_Model(item) {
       }
     }
   }
-
-  //出现回复后,立刻将其替换到消息框中
-
-  //  try {
-  //   const response = await fetch("http://localhost:3000/api/stream", {
-  //     method: "GET",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //   });
-  //   //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
-  //   const reader = response.body.getReader();
-  //   console.log("拿到 reader 了:", reader); //reader是二进制数据,需要一直解码
-  //   //解码器,作用是解析reader这个二进制的数据
-  //   const decoder = new TextDecoder();
-  //   //避免报错
-  //   let running = true;
-  //   while (running) {
-  //     //read()是一个异步函数,返回的是promise,作用是持续读取数据,没数据就等待,直到结束
-  //     //返回值就两个,done和value
-  //     const { done, value } = await reader.read();
-  //     if (done) {
-  //       console.log("已结束");
-  //       break;
-  //     }
-  //     //解析二进制数据,最后的stream是指流式输出
-  //     const chunk = await decoder.decode(value, { stream: true });
-  //     console.log("解码后的文本片段:", chunk);
-  //     const packet = chunk.split("\n\n");
-
-  //     for (const item of packet) {
-  //       //排除空选项
-  //       if (!item.trim()) continue;
-  //       //判断前6个字符是否正确
-  //       if (item.startsWith("data: ")) {
-  //         const content = item.slice(6);
-  //         console.log("流式读取的内容为:", content);
-
-  //         //我们自己的业务逻辑：判断是不是结束标记
-  //         if (content === "[DONE]") {
-  //           console.log("收到我们自己定义的结束标记，不处理了");
-  //           continue;
-  //         }
-  //       }
-  //     }
-  //   }
-  // } catch (error) {
-  //   console.log(error);
-  // }
 
   console.log("后端已同步更改");
 }

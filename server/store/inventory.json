@@ -2,17 +2,17 @@
   "data": [
     {
       "name": "灵石",
-      "value": 100,
-      "mount": 20
+      "value": 1,
+      "mount": 30
     },
     {
-      "name": "基础灵药",
-      "value": 30,
-      "mount": 10
+      "name": "黄阶中品丹药",
+      "value": 15,
+      "mount": 2
     },
     {
-      "name": "外门弟子的戒指",
-      "value": 10,
+      "name": "初级武器",
+      "value": 20,
       "mount": 1
     }
   ]

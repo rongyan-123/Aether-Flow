@@ -1,37 +1,22 @@
 {
   "name": "王德发",
-  "age": 18,
+  "age": 20,
   "gender": "男",
-  "background": "王德发乃天南某宗门的外门弟子，虽起初条件平凡，但他心机深沉，决心在修行路上追求更高的境界。",
+  "background": "被家族抛弃的庶子，心存不甘，偷学家族武技，誓要扳回一切。",
   "level": "炼气期一层",
-  "numerical_cultivation": "0/200",
-  "spiritual_root_type": "三灵根",
-  "spiritual_root_grade": "一品",
-  "spiritual_power": "0/100",
-  "potential": "12/20",
-  "fortune": "6/20",
-  "comprehension": "10/20",
-  "talent": [
-    "悟性超群"
-  ],
   "cultivation_technique": [
     {
-      "name": "混沌真经",
-      "grade": "玄阶中品"
+      "name": "破空拳",
+      "grade": "黄阶中品"
     }
   ],
-  "combat_technique": [
-    {
-      "name": "火焰刀法",
-      "grade": "地阶下品",
-      "level": "小成"
-    }
-  ],
-  "movement_technique": [
-    {
-      "name": "飘风步",
-      "grade": "黄阶中品",
-      "level": "初入"
-    }
+  "spiritual_root_type": "双灵根",
+  "spiritual_root_grade": "二品",
+  "spiritual_power": "30/100",
+  "root_bone": 15,
+  "fortune": "5/20",
+  "comprehension": "12/20",
+  "talent": [
+    "拳道领悟"
   ]
 }

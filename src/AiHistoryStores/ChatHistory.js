@@ -17,8 +17,11 @@ export const useChatHistoryStore = defineStore("ChatHistory", {
       this.data.push({
         id: Date.now(),
         role: "assistant",
-        content: "道友请稍安勿躁,正在生成世界",
+        content:
+          "道友请稍安勿躁,正在生成世界,包括剧情,设定,人设,地图等等,可能需要1-2分钟",
         loading: true,
+        isThinking: false,
+        thinkingText: "",
       });
     },
     assistantChange(content) {
@@ -31,6 +34,13 @@ export const useChatHistoryStore = defineStore("ChatHistory", {
         lastMsg.loading = false;
       }
       lastMsg.content += content;
+    },
+    deepThinking(reasoning) {
+      //读取最后一个数组
+      const lastMsg = this.data[this.data.length - 1];
+      //改变其深度思考的状态
+      lastMsg.isThinking = true;
+      lastMsg.thinkingText += reasoning; // 流式拼接思考内容
     },
 
     //输出历史记录

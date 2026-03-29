@@ -4,10 +4,11 @@ const app = express();
 const PORT = 3000;
 const cors = require("cors");
 const { chatWithAI, initRAG, layer5 } = require("./utils/ai.js");
-const { backpack, PlayerData } = require("./fs.js");
 const { Init_AI } = require("./utils/Init_ai.js");
 const fs = require("fs");
 const { Readable } = require("stream");
+const { StateMachina } = require("./fs.js");
+const eventBus = require("./utils/eventBus.js");
 
 app.use(cors()); //跨域访问需要,比如端口8081访问端口3000
 app.use(express.json()); //加了才能解析前端发送的json数据
@@ -17,19 +18,27 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/chat", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
   console.log("成功访问.用户输入为:", req.body);
   //判断游戏是否开始
   let Game_start = true;
-  const reply = await chatWithAI(req.body.midInput, Game_start);
-  const final_res = {
-    //此处直接调用新背包和面板,将其传给前端
-    reply: reply,
-    inventory: backpack.data, //传入的是对象数组...
-    PlayerData: PlayerData,
+
+  //后端发送函数,前端的EventSource会自动解析这里的值,获取content的
+  const SendLayer_Messages = (content) => {
+    res.write(`data: ${content}\n\n`);
   };
 
-  console.log("chatWithAI 返回：", final_res);
-  res.json({ final_res });
+  const reply = await chatWithAI(
+    req.body.midInput,
+    Game_start,
+    SendLayer_Messages,
+  );
+  // 【核心修改】把 Web Stream 转成 Node.js Stream
+  const nodeStream = Readable.fromWeb(reply);
+  // 现在可以用 pipe 了
+  nodeStream.pipe(res);
 });
 
 //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
@@ -44,34 +53,38 @@ app.post("/api/Game_Init", async (req, res) => {
 
 //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
 app.post("/api/game_start", async (req, res) => {
-  // 1. 【关键第一步】设置响应头，告诉前端这是流式输出
+  // 1. 【关键第一步】设置响应头，告诉前端这是流式输出,SSE
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  console.log("成功进入更新后端背包和面板");
+
   const playerFilePath = "./store/PlayerData.json";
   const rawPlayer = fs.readFileSync(playerFilePath, "utf8");
   let playerData = JSON.parse(rawPlayer); // 这是真正的数据对象
-
-  const inventoryFilePath = "./store/inventory.json";
-  const rawInventory = fs.readFileSync(inventoryFilePath, "utf8");
-  const inventory = JSON.parse(rawInventory);
-  //修改玩家面板
-  playerData = req.body.item.player_data;
-  await fs.writeFileSync(
-    //写回背包文件,持久化处理
-    "./store/PlayerData.json",
-    JSON.stringify(playerData, null, 2),
-    "utf8",
-  );
-  //修改背包
-  inventory.data = req.body.item.player_inventory; // 如果前端传入的是数组
-  await fs.writeFileSync(
-    //写回背包文件,持久化处理
-    "./store/inventory.json",
-    JSON.stringify(inventory, null, 2),
-    "utf8",
-  );
+  //更新后端数据
+  try {
+    const inventoryFilePath = "./store/inventory.json";
+    const rawInventory = fs.readFileSync(inventoryFilePath, "utf8");
+    const inventory = JSON.parse(rawInventory);
+    //修改玩家面板
+    playerData = req.body.item.player_data;
+    await fs.writeFileSync(
+      //写回背包文件,持久化处理
+      "./store/PlayerData.json",
+      JSON.stringify(playerData, null, 2),
+      "utf8",
+    );
+    //修改背包
+    inventory.data = req.body.item.player_inventory; // 如果前端传入的是数组
+    await fs.writeFileSync(
+      //写回背包文件,持久化处理
+      "./store/inventory.json",
+      JSON.stringify(inventory, null, 2),
+      "utf8",
+    );
+  } catch (err) {
+    console.log("在游戏初始化阶段,更新背包和面板出现错误:", err);
+  }
   console.log("后端已同步更改,当前位置:server.js");
   console.log("🔴🔴🔴用户已选择,直接进入五层架构,生成剧情和开头🔴🔴🔴");
   //拿到用户选择的模版的背景
@@ -80,8 +93,16 @@ app.post("/api/game_start", async (req, res) => {
 
   //判断游戏是否开始
   let Game_start = false;
+  //后端发送函数
+  const SendLayer_Messages = (content) => {
+    res.write(`data: ${content}\n\n`);
+  };
 
-  const reply = await chatWithAI(req.body.midInput, Game_start, Init_Plot);
+  const reply = await chatWithAI(
+    req.body.midInput,
+    Game_start,
+    SendLayer_Messages,
+  );
 
   // 【核心修改】把 Web Stream 转成 Node.js Stream
   const nodeStream = Readable.fromWeb(reply);
@@ -89,16 +110,22 @@ app.post("/api/game_start", async (req, res) => {
   nodeStream.pipe(res);
 });
 
+// 🔥 把这两行放在路由之前，限制改大一点（比如 50mb）
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+//🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴第五层🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
 // 【新增】专门执行第五层的接口
 app.post("/api/run-layer5", async (req, res) => {
   try {
     const { fullText } = req.body;
     console.log("前端传回完整AI文本，执行第五层");
     // 直接调用你的第五层
-    layer5(fullText);
-    res.json({ success: true });
+    const reply = await layer5(fullText, StateMachina.userInput);
+    console.log("✅ 第五层执行结果：", reply);
+    res.json(reply);
   } catch (err) {
-    res.json({ success: false });
+    res.json({ success: false, msg: "layer5执行失败" });
   }
 });
 
@@ -108,20 +135,20 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   console.log("SSE已启动");
-  let currentNumber = 1;
-  const timer = setInterval(() => {
-    if (currentNumber > 10) {
-      res.write("data:[DONE]\n\n"); //这里的DONE不是规则,只是一个结束的标志,可以随便改
-      clearInterval(timer);
-      res.end();
-      return;
-    }
+  const listener = (layerType, msg) => {
+    res.write(`event: ${layerType}\n`);
+    res.write(`data: ${msg}\n\n`);
+  };
 
-    res.write(`data: ${currentNumber}\n\n`);
-    currentNumber++;
-  }, 500);
+  eventBus.on("ai-progress", listener);
+
+  req.on("close", () => {
+    eventBus.off("ai-progress", listener);
+    res.end();
+  });
 });
 
+//初始化函数
 const serverstart = async () => {
   await initRAG();
   app.listen(PORT, () => {
