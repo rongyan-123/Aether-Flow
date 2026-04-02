@@ -119,7 +119,9 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.post("/api/run-layer5", async (req, res) => {
   try {
     const { fullText } = req.body;
-    console.log("前端传回完整AI文本，执行第五层");
+    console.log("进入第五层");
+    console.log("流式输出的ai文本内容(请查看是否超过5wtoken):", fullText);
+
     // 直接调用你的第五层
     const reply = await layer5(fullText, StateMachina.userInput);
     console.log("✅ 第五层执行结果：", reply);

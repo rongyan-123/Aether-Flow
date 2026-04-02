@@ -8,7 +8,7 @@
       <Information_Input @input-user="Game_start" />
     </div>
 
-    <div v-show="GameStart.select === true" class="flex-container">
+    <div v-if="GameStart.select === true" class="flex-container">
       <user_selected @user-selected="select_model"></user_selected>
     </div>
 

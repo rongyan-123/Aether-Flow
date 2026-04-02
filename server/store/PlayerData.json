@@ -1,22 +1,23 @@
 {
-  "name": "王德发",
-  "age": 20,
+  "name": "齐尘",
   "gender": "男",
-  "background": "被家族抛弃的庶子，心存不甘，偷学家族武技，誓要扳回一切。",
+  "age": 18,
+  "background": "偶然获得上古秘宝，吸引了多个势力的注意，成了大家争夺的目标，开始了冒险与艰难的修炼之路。",
   "level": "炼气期一层",
-  "cultivation_technique": [
-    {
-      "name": "破空拳",
-      "grade": "黄阶中品"
-    }
-  ],
-  "spiritual_root_type": "双灵根",
+  "numerical_cultivation": "0/200",
+  "spiritual_root_type": "风灵根",
   "spiritual_root_grade": "二品",
-  "spiritual_power": "30/100",
-  "root_bone": 15,
-  "fortune": "5/20",
+  "spiritual_power": "15/100",
+  "potential": "10/20",
+  "fortune": "18/20",
   "comprehension": "12/20",
   "talent": [
-    "拳道领悟"
+    "气运之子(天赋):拥有逆天机缘的属性，带来更多机缘。"
+  ],
+  "cultivation_technique": [
+    {
+      "name": "风行诀",
+      "grade": "黄阶中品"
+    }
   ]
 }

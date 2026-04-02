@@ -409,7 +409,23 @@ ${StateMachina.QueryResult}
 ${JSON.stringify(StateMachina.now_location, null, 2)}
 ---
 
-        以下是一些基本的剧情流派和风格,可以参考着写:
+        
+        【逻辑铁则】
+      - 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
+      - 重大事件（如金丹期修士获胜、邀请主角）必须有合理铺垫或动机。
+      - 战斗结果必须基于实力对比，不能出现以弱胜强（除非有特殊法宝或机缘，需在剧情中明确说明）。
+      - 人物动机要清晰，不能无缘无故做出不合常理的行为。
+      - 具体逻辑请务必遵照底层逻辑(世界观设定):${World_Rule}
+  `,
+      parameters: {
+        type: "object",
+        required: ["Beginning", "Continuation", "Change", "SummingUp", "clue"],
+        properties: {
+          Beginning: {
+            type: "string",
+            description: `这是剧情的开端,要求:
+            1, 必须选其中一条流派作为开端
+            以下是一些基本的剧情流派和风格,可以参考着写:
         生成的剧情要开头强情绪,此处给出几个开头风格,请务必参考,选出最符合原背景的一条:
       a.废柴流：主角资质极差，遭宗门/家族抛弃，后获奇遇逆袭成神。
       b.退婚流：主角被未婚妻当众退婚，受尽羞辱，发奋修炼，最终强势打脸。
@@ -427,23 +443,9 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
       n.被逐出师门流：主角因“资质平庸”被赶出山门，后凭借毅力与机缘，成就远超师门。
       o.宿敌流：主角与命中宿敌从少年斗到中年，一路相爱相杀，最终一决高下。  
       请别忘记,此处要结合原背景Init_Plot,二次创作的
-        【逻辑铁则】
-      - 所有人物行为必须符合其境界、实力和身份。高境界对低境界有压制，低境界不可能主动挑衅高境界，更不可能“试图夺取”。
-      - 重大事件（如金丹期修士获胜、邀请主角）必须有合理铺垫或动机。
-      - 战斗结果必须基于实力对比，不能出现以弱胜强（除非有特殊法宝或机缘，需在剧情中明确说明）。
-      - 人物动机要清晰，不能无缘无故做出不合常理的行为。
-      - 具体逻辑请务必遵照底层逻辑(世界观设定):${World_Rule}
-  `,
-      parameters: {
-        type: "object",
-        required: ["Beginning", "Continuation", "Change", "SummingUp", "clue"],
-        properties: {
-          Beginning: {
-            type: "string",
-            description: `这是剧情的开端,要求:
-          1,给一个用户当前需要的,而且无法实现的目标;
-          2,立刻给用户制造危机
-          3. 必须【强情绪开头】，直接给用户无法实现的目标 + 制造危机(危机不一定是战斗,也可以是各种负面,包括压迫,嘲讽,任务等等,具体可以参考流派,流派里面写的都是危机)
+          
+          2,立刻给用户制造危机,且符合流派中的危机(危机不一定是战斗,也可以是各种负面,包括压迫,嘲讽,任务等等,具体可以参考流派,流派里面写的都是危机)
+          3. 必须【强情绪开头】,不能平淡如水
           4. *强制*:严格贴合选中的修仙流派(废柴/退婚/扮猪吃虎等)定制开局，目标与危机完全匹配流派核心矛盾
           5. *强制*:禁止开局直接安排战斗冲突，优先使用流派对应的羞辱、排挤、轻视、困境、不公等强情绪危机
           6. *强制*:100%结合用户Init_Plot背景，让流派开局与用户身份、处境完全贴合
@@ -451,7 +453,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           },
           Continuation: {
             type: "string",
-            description: `这是剧情的发展,要求:
+            description: `这是剧情的发展,必须顺应上面的流派,要求:
           1,用户解决了刚刚的危机,获得了对应收获
           2,要对之后的剧情进行铺垫,伏笔
           3,要制造小爽点,比如打脸,众人震惊等等
@@ -463,7 +465,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           },
           Change: {
             type: "string",
-            description: `这是剧情的转折,要求:
+            description: `这是剧情的转折,必须顺应上面的流派,要求:
           1,本以为之前的小危机没事,结果引来了更大的危机,转折
           2,然后要给用户更大的希望
           3,同时之前的所有伏笔,在这里都要进行收回
@@ -475,7 +477,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           },
           SummingUp: {
             type: "string",
-            description: `这是剧情的最后,要求:
+            description: `这是剧情的最后,必须顺应上面的流派,要求:
           1,危机解除,用户变强,收获了很多东西
           2,然后要给用户一段较长时间的休憩,休闲剧情剧情
           3,完美收尾当前流派剧情
@@ -811,6 +813,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
     },
   },
 
+  //修改状态机:剧情
   //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴游戏初始化ai专用
 
   //生成模板
@@ -933,11 +936,15 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                     name: {
                       type: "string",
                       description:
-                        "功法名称（古风逼格，不含‘功法’二字，如：青元诀、焚天诀、混元经）",
+                        "功法名称（古风逼格，不含‘功法’二字，如：青元诀、焚天诀、混元经,注意,这里的例子不允许借用）",
                     },
                     grade: {
                       type: "string",
                       description: "品阶，如'黄阶下品'",
+                    },
+                    effect: {
+                      type: "string",
+                      description: "效果阐述,这个功法有什么效果?功能?",
                     },
                   },
                   required: ["name", "grade"],
@@ -953,7 +960,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                     name: {
                       type: "string",
                       description:
-                        "战技名称（古风逼格，不含‘战技’二字，如：焚天掌、裂地拳、霸王刀法）",
+                        "战技名称（古风逼格，不含‘战技’二字，如：焚天掌、裂地拳、霸王刀法,注意,这里的例子不允许借用）",
                     },
                     grade: {
                       type: "string",
@@ -963,6 +970,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                       type: "string",
                       description: "熟练度等级，如'初入'",
                       enum: ["初入", "小成", "大成", "圆满"],
+                    },
+                    effect: {
+                      type: "string",
+                      description: "效果阐述,这个战技有什么效果?功能?",
                     },
                   },
                   required: ["name", "grade", "level"],
@@ -978,7 +989,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                     name: {
                       type: "string",
                       description:
-                        "身法名称（古风逼格，不含‘身法’二字，如：轻身术、不动涟漪、缩地成寸）",
+                        "身法名称（古风逼格，不含‘身法’二字，如：轻身术、不动涟漪、缩地成寸,注意,这里的例子不允许借用）",
                     },
                     grade: {
                       type: "string",
@@ -988,6 +999,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                       type: "string",
                       description: "熟练度等级，如'初入'",
                       enum: ["初入", "小成", "大成", "圆满"],
+                    },
+                    effect: {
+                      type: "string",
+                      description: "效果阐述,这个身法有什么效果?功能?",
                     },
                   },
                   required: ["name", "grade", "level"],
@@ -1003,7 +1018,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                     name: {
                       type: "string",
                       description:
-                        "法门名称（古风逼格，不含‘法门’二字，如：沼泽术(用来将土地化为沼泽)、点石成金、炼丹术）",
+                        "法门名称（古风逼格，不含‘法门’二字，如：沼泽术(用来将土地化为沼泽)、点石成金、炼丹术,注意,这里的例子不允许借用）",
                     },
                     grade: {
                       type: "string",
@@ -1012,6 +1027,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
                     type: {
                       type: "string",
                       description: "类型，如'炼丹术'、'炼器术'等",
+                    },
+                    effect: {
+                      type: "string",
+                      description: "效果阐述,这个法门有什么效果?功能?",
                     },
                   },
                   required: ["name", "grade", "type"],

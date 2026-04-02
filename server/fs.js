@@ -222,6 +222,7 @@ function Add_AiItems(name) {
 //======================================🔴状态机
 const State_mid = fs.readFileSync("./store/user_StateMachina.json", "utf8");
 const StateMachina = JSON.parse(State_mid);
+if (!StateMachina.userInput) StateMachina.userInput = "";
 
 function ChangePlot(newPlot) {
   StateMachina.Plot = newPlot;
@@ -244,8 +245,6 @@ function ChangeLocation(newLocation) {
       newLocation,
     );
   }
-
-  StateMachina.now_location = newLocation;
   fs.writeFileSync(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),

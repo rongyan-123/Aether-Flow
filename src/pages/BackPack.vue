@@ -14,15 +14,31 @@
         :key="item.id"
         class="item-card"
       >
+        <!-- 左侧：序号 + 主要信息 -->
         <div class="item-left">
           <span class="item-index">{{ index + 1 }}</span>
           <div class="item-info">
             <div class="item-name">{{ item.name }}</div>
+            <div class="item-look" v-if="item.look">{{ item.look }}</div>
           </div>
         </div>
+
+        <!-- 右侧：属性标签区 -->
         <div class="item-right">
-          <span class="item-tag value-tag">价值: {{ item.value }}</span>
-          <span class="item-tag mount-tag">数量: {{ item.mount }}</span>
+          <span class="item-tag value-tag" v-if="item.value !== undefined"
+            >价值: {{ item.value }}灵石</span
+          >
+          <span class="item-tag mount-tag" v-if="item.mount !== undefined"
+            >数量: {{ item.mount }}</span
+          >
+          <span class="item-tag level-tag" v-if="item.level">{{
+            item.level
+          }}</span>
+        </div>
+
+        <!-- 额外信息（效果）单独一行，占满宽度 -->
+        <div class="item-effect" v-if="item.effect">
+          <span class="effect-label">效用：</span>{{ item.effect }}
         </div>
       </div>
     </div>
@@ -40,7 +56,7 @@ const InventoryStore = useInventoryStore();
 
 /* 整体容器：古风牛皮纸背景，和整体风格统一 */
 .inventory-container {
-  max-width: 750px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 30px 20px;
   background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 50%, #dcc9a8 100%);
@@ -49,7 +65,7 @@ const InventoryStore = useInventoryStore();
   position: relative;
 }
 
-/* 牛皮纸全局纹理，和整体统一 */
+/* 牛皮纸全局纹理 */
 .inventory-container::before {
   content: "";
   position: absolute;
@@ -63,7 +79,7 @@ const InventoryStore = useInventoryStore();
   z-index: 0;
 }
 
-/* 标题：古风风格，和角色面板统一 */
+/* 标题 */
 .inventory-title {
   text-align: center;
   color: #5c3d2e;
@@ -76,7 +92,7 @@ const InventoryStore = useInventoryStore();
   z-index: 1;
 }
 
-/* 空状态：古风风格 */
+/* 空状态 */
 .empty-state {
   text-align: center;
   color: #7a5230;
@@ -100,17 +116,18 @@ const InventoryStore = useInventoryStore();
   z-index: 1;
 }
 
-/* 单个物品卡片：古风风格 */
+/* 单个物品卡片 */
 .item-card {
   background: linear-gradient(180deg, #faf0e6 0%, #f5e6d3 100%);
-  border-radius: 10px;
-  padding: 20px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  border-radius: 12px;
+  padding: 18px 24px;
   box-shadow: 0 4px 12px rgba(92, 61, 46, 0.12);
   border: 1px solid #c9a87c;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .item-card:hover {
@@ -118,11 +135,13 @@ const InventoryStore = useInventoryStore();
   box-shadow: 0 6px 16px rgba(92, 61, 46, 0.18);
 }
 
-/* 左侧：序号+名称 */
+/* 左侧：序号+名称+外貌 */
 .item-left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 18px;
+  flex: 2;
+  min-width: 200px;
 }
 
 .item-index {
@@ -137,40 +156,79 @@ const InventoryStore = useInventoryStore();
   font-size: 15px;
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(139, 90, 43, 0.25);
+  flex-shrink: 0;
+}
+
+.item-info {
+  flex: 1;
 }
 
 .item-name {
   color: #5c3d2e;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 1px;
+  margin-bottom: 6px;
 }
 
-/* 右侧：价值+数量标签 */
+.item-look {
+  font-size: 13px;
+  color: #8b5a2b;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* 右侧标签区 */
 .item-right {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 1;
 }
 
 .item-tag {
-  padding: 7px 14px;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 1px;
   border: 1px solid #c9a87c;
+  background: #fff9ef;
+  white-space: nowrap;
 }
 
-/* 价值标签：古风金色系 */
 .value-tag {
-  background: linear-gradient(135deg, #fff8dc 0%, #f5e6d3 100%);
   color: #8b4513;
+  border-color: #d4a373;
 }
 
-/* 数量标签：古风蓝色系 */
 .mount-tag {
-  background: linear-gradient(135deg, #e8f4f8 0%, #d4e8f0 100%);
   color: #4a6fa5;
+  border-color: #b0c4de;
+}
+
+.level-tag {
+  color: #2c5a2e;
+  border-color: #8fbc8f;
+  background: #e8f0e8;
+}
+
+/* 效果描述单独一行 */
+.item-effect {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #dcc9a8;
+  font-size: 13px;
+  color: #6b4c3b;
+  width: 100%;
+  line-height: 1.5;
+}
+
+.effect-label {
+  font-weight: 700;
+  color: #8b5a2b;
+  margin-right: 8px;
 }
 </style>

@@ -8,7 +8,7 @@
     >
       <div class="card-header">模板 {{ index + 1 }}</div>
 
-      <!-- 按字段顺序展示所有面板信息 -->
+      <!-- 基础信息 -->
       <div class="field-row">
         <span class="field-label">姓名：</span
         >{{ item.player_data.name || "无" }}
@@ -57,6 +57,8 @@
         <span class="field-label">悟性：</span
         >{{ item.player_data.comprehension || "无" }}
       </div>
+
+      <!-- 天赋数组 -->
       <div class="field-row">
         <span class="field-label">天赋：</span>
         <span v-if="item.player_data.talent && item.player_data.talent.length">
@@ -68,6 +70,7 @@
         <span v-else>无</span>
       </div>
 
+      <!-- 功法数组 -->
       <div class="field-row">
         <span class="field-label">核心功法：</span>
         <span
@@ -80,8 +83,7 @@
             v-for="(tech, idx) in item.player_data.cultivation_technique"
             :key="idx"
           >
-            {{ tech
-            }}<span
+            {{ tech.name }}({{ tech.grade }})<span
               v-if="idx < item.player_data.cultivation_technique.length - 1"
               >、</span
             >
@@ -90,6 +92,7 @@
         <span v-else>无</span>
       </div>
 
+      <!-- 战技数组 -->
       <div class="field-row">
         <span class="field-label">战技：</span>
         <span
@@ -102,8 +105,8 @@
             v-for="(skill, idx) in item.player_data.combat_technique"
             :key="idx"
           >
-            {{ skill
-            }}<span v-if="idx < item.player_data.combat_technique.length - 1"
+            {{ skill.name }}({{ skill.grade }}/{{ skill.level }})<span
+              v-if="idx < item.player_data.combat_technique.length - 1"
               >、</span
             >
           </span>
@@ -111,6 +114,7 @@
         <span v-else>无</span>
       </div>
 
+      <!-- 身法数组 -->
       <div class="field-row">
         <span class="field-label">身法：</span>
         <span
@@ -123,8 +127,8 @@
             v-for="(move, idx) in item.player_data.movement_technique"
             :key="idx"
           >
-            {{ move
-            }}<span v-if="idx < item.player_data.movement_technique.length - 1"
+            {{ move.name }}({{ move.grade }}/{{ move.level }})<span
+              v-if="idx < item.player_data.movement_technique.length - 1"
               >、</span
             >
           </span>
@@ -132,6 +136,7 @@
         <span v-else>无</span>
       </div>
 
+      <!-- 其他法门数组 -->
       <div class="field-row">
         <span class="field-label">其他法门：</span>
         <span
@@ -144,15 +149,33 @@
             v-for="(other, idx) in item.player_data.other_technique"
             :key="idx"
           >
-            {{ other
-            }}<span v-if="idx < item.player_data.other_technique.length - 1"
+            {{ other.name }}({{ other.grade }}/{{ other.type }})<span
+              v-if="idx < item.player_data.other_technique.length - 1"
               >、</span
             >
           </span>
         </span>
         <span v-else>无</span>
       </div>
-      <!--这里还得加个显示背包内容的,player_inventory是对象数组,同时还要改一下显示,这里战技等地方显示不了对象-->
+
+      <!-- 背包物品 -->
+      <div class="field-row inventory-section">
+        <span class="field-label">背包物品：</span>
+        <div class="inventory-items">
+          <div v-if="item.player_inventory && item.player_inventory.length">
+            <div
+              v-for="(inv, idx) in item.player_inventory"
+              :key="idx"
+              class="inventory-item"
+            >
+              <span class="inv-name">{{ inv.name }}</span>
+              <span class="inv-value">价值:{{ inv.value }}灵石</span>
+              <span class="inv-mount">x{{ inv.mount }}</span>
+            </div>
+          </div>
+          <span v-else>无</span>
+        </div>
+      </div>
 
       <button class="select-btn" @click="Select_Model(item)">选择此模版</button>
     </div>
@@ -166,6 +189,17 @@ import { usePlayerStore } from "@/stores/player";
 import { eventBus } from "@/utils/eventBus";
 import { onMounted, onUnmounted, ref } from "vue";
 import { defineEmits } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
+let chosen = ref(false);
+
+onBeforeRouteLeave((to, from, next) => {
+  if (chosen.value) {
+    next();
+  } else {
+    alert("抱歉,请先选择模版");
+    next(false);
+  }
+});
 
 // 🔥 封装一个通用的 JSON 检测函数
 function isValidJSON(str) {
@@ -203,6 +237,7 @@ const Chat = useChatHistoryStore();
 //选择模版后的执行逻辑
 async function Select_Model(item) {
   console.log("成功选择模板:", item);
+  chosen.value = true;
   //选择后,立刻更新历史记录,出现一个消息框
   Chat.assistantadd();
   //1, 更新前端
@@ -291,7 +326,7 @@ async function Select_Model(item) {
           if (contents) {
             console.log("提取到的文本:", contents);
             // 👇 拼接完整文本
-            fullAIText += content;
+            fullAIText += contents;
             // 8. 推给前端（记得也要加 data: 前缀和 \n\n 后缀）
             //res.write(`data: ${contents}\n\n`);
             Chat.assistantChange(contents);
@@ -310,16 +345,16 @@ async function Select_Model(item) {
 <style scoped>
 .template-selector {
   display: flex;
-  flex-direction: row; /* 横向排列 */
-  gap: 20px; /* 卡片间距 */
-  overflow-x: auto; /* 超出时水平滚动 */
+  flex-direction: row;
+  gap: 20px;
+  overflow-x: auto;
   padding: 20px;
-  height: 100%; /* 占满父容器高度 */
+  height: 100%;
   box-sizing: border-box;
-  align-items: flex-start; /* 顶部对齐，避免卡片拉伸 */
+  align-items: flex-start;
 }
 .template-card {
-  flex: 0 0 300px; /* 固定宽度，不被压缩 */
+  flex: 0 0 320px;
   background: #f9f3e7;
   border: 1px solid #e2d5c0;
   border-radius: 12px;
@@ -327,9 +362,8 @@ async function Select_Model(item) {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  /* 确保卡片内内容过多时，卡片自身可滚动？可选 */
-  max-height: 90%; /* 限制卡片高度，避免溢出 */
-  overflow-y: auto; /* 内容过多时卡片内部滚动 */
+  max-height: 90%;
+  overflow-y: auto;
 }
 .card-header {
   font-size: 1.2rem;
@@ -348,7 +382,33 @@ async function Select_Model(item) {
   font-weight: 600;
   color: #8b5a2b;
   display: inline-block;
-  width: 80px; /* 让标签对齐 */
+  width: 80px;
+  vertical-align: top;
+}
+.inventory-section {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.inventory-items {
+  margin-top: 4px;
+  width: 100%;
+}
+.inventory-item {
+  font-size: 12px;
+  margin: 4px 0;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed #e2d5c0;
+  padding: 4px 0;
+}
+.inv-name {
+  font-weight: 500;
+  color: #5c3d2e;
+}
+.inv-value,
+.inv-mount {
+  color: #8b5a2b;
+  margin-left: 8px;
 }
 .select-btn {
   background: #8b5a2b;
@@ -362,5 +422,16 @@ async function Select_Model(item) {
 }
 .select-btn:hover {
   background: #a0522d;
+}
+.template-card::-webkit-scrollbar {
+  width: 6px;
+}
+.template-card::-webkit-scrollbar-track {
+  background: #f1e5d3;
+  border-radius: 3px;
+}
+.template-card::-webkit-scrollbar-thumb {
+  background: #c9a87c;
+  border-radius: 3px;
 }
 </style>
