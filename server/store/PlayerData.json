@@ -1,23 +1,45 @@
 {
   "name": "齐尘",
+  "age": 21,
   "gender": "男",
-  "age": 18,
-  "background": "偶然获得上古秘宝，吸引了多个势力的注意，成了大家争夺的目标，开始了冒险与艰难的修炼之路。",
+  "background": "齐尘曾为一名天才弟子，然而因为一场意外失去了修炼资质，从此沦为普通散修。他带着仇恨与不甘，踏上复仇之路，愤怒与痛苦将助他再度崛起。",
   "level": "炼气期一层",
-  "numerical_cultivation": "0/200",
-  "spiritual_root_type": "风灵根",
+  "cultivation": "0/200",
+  "spiritual_root_type": "火灵根",
   "spiritual_root_grade": "二品",
-  "spiritual_power": "15/100",
-  "potential": "10/20",
-  "fortune": "18/20",
-  "comprehension": "12/20",
+  "spiritual_power": "40/100",
+  "potential": "8/20",
+  "fortune": "15/20",
+  "comprehension": "10/20",
   "talent": [
-    "气运之子(天赋):拥有逆天机缘的属性，带来更多机缘。"
+    "逆袭之意：(经历过无数挫折后的坚定信念，修炼速度加快)"
   ],
-  "cultivation_technique": [
+  "movement_technique": [
     {
-      "name": "风行诀",
-      "grade": "黄阶中品"
+      "name": "火影步",
+      "grade": "黄阶中品",
+      "level": "初入",
+      "effect": "提升自身速度，并能留下短暂火焰轨迹。"
+    }
+  ],
+  "other_technique": [
+    {
+      "name": "隐匿术",
+      "grade": "黄阶上品",
+      "effect": "能够短时间内隐藏气息，避开敌人观察。"
+    },
+    {
+      "name": "炼丹术",
+      "grade": "黄阶中品",
+      "effect": "基础炼丹，能够制作简单丹药，增加修为。"
+    }
+  ],
+  "combat_technique": [
+    {
+      "name": "烈焰掌",
+      "grade": "黄阶上品",
+      "level": "大成",
+      "effect": "以火焰为主的掌法，攻击时能增加火焰伤害。"
     }
   ]
 }

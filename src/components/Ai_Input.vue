@@ -40,6 +40,10 @@ function handler(data) {
 //发送到后端的函数
 async function sendHistory() {
   console.log("检查用户输入", userInformation);
+  //先上传到历史记录
+  Chat.useradd(userInput.value); //必须先在上面创建实例后,才能调用历史记录的pinia仓库里的方法
+  //选择后,立刻更新历史记录,出现一个消息框
+  Chat.assistantadd();
   emit("loading-Text");
   //非空检查
   const check = userInput.value.trim();
@@ -49,8 +53,6 @@ async function sendHistory() {
   }
 
   //先把当前用户输入的字符串,上传到历史记录,而且要渲染出当前对话,再统一发送给ai
-  //先上传到历史记录
-  Chat.useradd(userInput.value); //必须先在上面创建实例后,才能调用历史记录的pinia仓库里的方法
 
   //渲染对话在另一个界面进行,原理是只渲染历史记录就行,这里要做的就是往历史记录里面加东西,他会自动渲染的
 
@@ -92,17 +94,19 @@ async function sendHistory() {
         const data = await res.json();
         console.log("✅ 第五层执行结果(此处应该是背包和面板)：", data);
         console.log("直接替换前端的背包和面板");
-        backpack.data = data.reply.backpack;
-        player.$state = data.reply.PlayerData;
+        backpack.setBackpackData(data.backpack.data);
+        player.$state = data.PlayerData;
       } catch (err) {
-        console.error("❌ 调用第五层失败：", err);
+        console.error(
+          "❌ 调用第五层失败(错误可能不一定在第五层,也可能在这前端)：",
+          err,
+        );
       }
       break;
     }
     //解析二进制数据,最后的stream是指流式输出
     const chunk = decoder.decode(value, { stream: true });
-    // 👇 拼接完整文本
-    fullAIText += chunk;
+
     //将输出按照特定解析分开
     const packet = chunk.split("\n\n");
     for (const item of packet) {
@@ -130,17 +134,18 @@ async function sendHistory() {
             console.log("提取到的文本:", contents);
             // 8. 推给前端（记得也要加 data: 前缀和 \n\n 后缀）
             //res.write(`data: ${contents}\n\n`);
+            // 👇 拼接完整文本
+            fullAIText += contents;
+
             Chat.assistantChange(contents);
           }
-          console.log("最终回复为:", fullAIText);
-          //将对应ai回复输送到历史记录中,为下次回答做准备
-          Chat.assistantadd(fullAIText);
         } catch (parseError) {
           console.error("解析 JSON 失败:", parseError, "原始字符串:", content);
         }
       }
     }
   }
+  console.log("最终回复为:", fullAIText);
 }
 </script>
 

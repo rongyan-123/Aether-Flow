@@ -28,6 +28,8 @@ const {
   ChangeLocation,
   ChangeUserInput,
   AddQueryResult,
+  assistantadd,
+  useradd,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 const eventBus = require("./eventBus");
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
@@ -140,6 +142,8 @@ async function chatWithAI(userInput, Game_start) {
   console.time();
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
+  //存入历史记录
+  useradd(userInput);
   ChangeUserInput(userInput);
   // 新增这行，看控制台打印了几次
   console.log(
@@ -180,7 +184,7 @@ async function chatWithAI(userInput, Game_start) {
 查询设定和物品描述等等:Query_Data
 查询用户背包:Query_Backpack
 查询用户面板:Query_PlayerStats
-是否进入第二层叙事规划层judgment_of_proceed
+是否进入第二层叙事规划层judgment_of_proceed_2
 
 
 【用户当前数据（仅用于理解上下文，绝对不能修改）】
@@ -457,7 +461,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   }
 
   //🔴 3, 动态细节层
-  if (Proceed === "no") {
+  if (Proceed === "yes") {
     try {
       console.log("🔴 3, 进入第三层,动态细节层.");
       eventBus.emit("ai-progress", "layer3", "正在生成动态世界...");
@@ -578,7 +582,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           //生成人设
           if (toolname === "Generate_Character") {
             console.log("进入生成人设工具");
-            console.log("ai生成结果为:", toolArg);
+            //console.log("ai生成结果为:", toolArg);
             const level3_description = `名字:\n${toolArg.name}\n外貌:\n${toolArg.look}\n
             背景和过往历史:\n${toolArg.background}\n
             性格特质:\n${toolArg.personality}\n战力:\n${toolArg.combat_power}\n
@@ -616,7 +620,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
             });
             console.log("成功放入向量数据库");
 
-            console.log("此为ai生成的人设:", level3_description);
+            //console.log("此为ai生成的人设:", level3_description);
 
             //只将名字放入实体数组
             Add_AiItems(toolArg.name);
@@ -627,7 +631,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           //生成物品
           if (toolname === "Generate_Items") {
             console.log("进入生成物品工具");
-            console.log("ai生成结果为:", toolArg);
+            // console.log("ai生成结果为:", toolArg);
             const level3_description = `物品名称:\n${toolArg.name}\n物品外貌描写:\n${toolArg.look}\n
             价值:\n${toolArg.value}\n品阶:\n${toolArg.level}\n
             来历、用途、效果、适用条件，可含剧情伏笔:\n${toolArg.effect}\n
@@ -661,7 +665,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
             });
             console.log("成功放入向量数据库");
 
-            console.log("此为ai生成的物品:", level3_description);
+            //console.log("此为ai生成的物品:", level3_description);
 
             //只将名字放入实体数组
             Add_AiItems(toolArg.name);
@@ -672,7 +676,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           //生成地图
           if (toolname === "Generate_Location") {
             console.log("进入生成地图工具");
-            console.log("ai生成结果为:", toolArg);
+            // console.log("ai生成结果为:", toolArg);
             const level3_description = `地点名称:\n${
               toolArg.name
             }\n所在区域:\n${toolArg.region}\n危险等级:\n${
@@ -729,7 +733,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
             });
             console.log("成功放入向量数据库");
 
-            console.log("此为ai生成的地图:", level3_description);
+            //console.log("此为ai生成的地图:", level3_description);
             //存入地图数据,存整个对象,而非单纯的名字
             AddMaps(toolArg);
             //只将名字放入实体数组
@@ -892,8 +896,8 @@ ${level4_Replay}
 ${userInput}
 ---
 【3. 背包和面板】
-背包:${backpack}
-面板:${PlayerData}
+背包:${JSON.stringify(backpack, null, 2)}
+面板:${JSON.stringify(PlayerData, null, 2)}
 
 
 【4. 可用工具列表】
@@ -929,7 +933,8 @@ ${userInput}
 现在，请基于以上规则，根据实际输入执行任务。
 `;
 
-    // console.log("当前历史记录已经有:", history);
+    //先把第四层回复存入后端的数据库
+    assistantadd(level4_Replay);
 
     //新message2
     const level5_messages = [
@@ -1099,11 +1104,16 @@ ${userInput}
         }
       }
       console.log("工具执行结束,一共使用工具次数:", count);
-      console.log("开始更新前端仓库");
+      console.log(
+        "当前位置是后端ai第五层,先检查第五层背包和面板是否有误,先看背包:",
+        JSON.stringify(backpack, null, 2),
+      );
+      console.log("这个是面板:", JSON.stringify(PlayerData, null, 2));
+
       return { backpack, PlayerData };
     }
   } catch (error) {
-    console.log("第五层出现错误", error);
+    console.log("当前位置,后端ai,第五层出现错误", error);
     return "第五层处理失败，请稍后再试。";
   }
 }

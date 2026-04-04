@@ -241,7 +241,7 @@ async function Select_Model(item) {
   //选择后,立刻更新历史记录,出现一个消息框
   Chat.assistantadd();
   //1, 更新前端
-  backpack.data = item.player_inventory;
+  backpack.setBackpackData(item.player_inventory);
   player.$patch(item.player_data); //用patch合并,直接修改可能破坏响应式,导致无法重新渲染
   //2, 更新后端,同时发送api,直接生成对话
   emit("user-selected");
@@ -279,8 +279,14 @@ async function Select_Model(item) {
         });
         const data = await res.json();
         console.log("✅ 第五层执行结果：", data);
+        //同样修改一次,保证每次的前端数据都是最新的
+        backpack.setBackpackData(data.backpack.data);
+        player.$state = data.PlayerData;
       } catch (err) {
-        console.error("❌ 调用第五层失败：", err);
+        console.error(
+          "❌ 调用第五层失败(错误可能不一定在第五层,也可能在这前端)：",
+          err,
+        );
       }
       break;
     }

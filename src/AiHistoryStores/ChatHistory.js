@@ -18,7 +18,7 @@ export const useChatHistoryStore = defineStore("ChatHistory", {
         id: Date.now(),
         role: "assistant",
         content:
-          "道友请稍安勿躁,正在生成世界,包括剧情,设定,人设,地图等等,可能需要1-2分钟",
+          "道友请稍安勿躁,正在推演世界,包括剧情,设定,人设,地图等等,可能需要1-2分钟",
         loading: true,
         isThinking: false,
         thinkingText: "",

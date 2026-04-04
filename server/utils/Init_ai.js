@@ -74,7 +74,7 @@ const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
-const LLM = "gpt-3.5-turbo";
+const LLM = "gpt-4o-mini";
 //const LLM = "doubao-seed-2-0-pro-260215";
 
 //===================================================================

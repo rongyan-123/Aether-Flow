@@ -6,6 +6,28 @@ export const useInventoryStore = defineStore("inventory", {
     data: [],
   }),
   actions: {
+    setBackpackData(backpackData) {
+      // 如果已经是数组，直接使用
+      if (Array.isArray(backpackData)) {
+        this.data = backpackData;
+        return;
+      }
+      // 如果是对象，尝试提取 .data
+      if (backpackData && typeof backpackData === "object") {
+        let items = backpackData.data;
+        // 如果提取出的 items 还有 .data 属性（嵌套），继续提取
+        if (items && items.data && Array.isArray(items.data)) {
+          items = items.data;
+        }
+        if (Array.isArray(items)) {
+          this.data = items;
+          return;
+        }
+      }
+      // 无法解析，置空并警告
+      console.warn("无法解析背包数据", backpackData);
+      this.data = [];
+    },
     add(obj) {
       //使用遍历,来做到同类物品堆叠
       for (const item of this.data) {

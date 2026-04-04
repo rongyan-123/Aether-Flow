@@ -787,6 +787,10 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
             type: "string",
             enum: ["yes"],
           },
+          reason: {
+            type: "string",
+            description: "描述为什么要调用这个工具,给出理由",
+          },
         },
       },
     },
@@ -921,7 +925,9 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
               },
               talent: {
                 type: "array",
-                description: `天赋列表，每个元素为字符串,没有则填'无',起名请不要带"天赋"二字,要有逼格一点,然后天赋,具体就是这个人有什么样的资质,也得参考背景,如剑道的宗门子弟,也许有剑道天赋等等,也得结合其功法和战技等等各种属性进行生成,联系其余属性,多思考,天赋也可生成不止一种`,
+                description: `天赋列表，每个元素为字符串,没有则填'无',起名请不要带"天赋"二字,要有逼格一点,然后天赋,具体就是这个人有什么样的资质,也得参考背景,如剑道的宗门子弟,也许有剑道天赋等等,也得结合其功法和战技等等各种属性进行生成,联系其余属性,多思考,天赋也可生成不止一种
+                除此以外,天赋请务必给出描述和解释,格式如下: (天赋名):(天赋效果)
+                `,
                 items: { type: "string" },
               },
               cultivation_technique: {

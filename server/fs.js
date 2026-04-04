@@ -177,7 +177,7 @@ function reduceItem(obj) {
   return `没有在物品栏中找到${obj.name}`;
 }
 
-//=======================================🔴读取历史记录 ,开发阶段,为节省token,暂时不保存到本地
+//=======================================🔴读取历史记录
 const rawhistory = fs.readFileSync(
   "./AiHistoryStores/ChatHistory.json",
   "utf8",
@@ -188,16 +188,28 @@ function useradd(input) {
   history.chatHistory.push({
     id: Date.now(), //唯一标识,必须加,否则无法绑定和渲染
     role: "user",
-    content: input,
+    content: input ?? "",
   });
+  fs.writeFileSync(
+    //写回,持久化处理
+    "./AiHistoryStores/ChatHistory.json",
+    JSON.stringify(history, null, 2),
+    "utf8",
+  );
 }
 
 function assistantadd(input) {
   history.chatHistory.push({
     id: Date.now(),
     role: "assistant",
-    content: input,
+    content: input ?? "",
   });
+  fs.writeFileSync(
+    //写回,持久化处理
+    "./AiHistoryStores/ChatHistory.json",
+    JSON.stringify(history, null, 2),
+    "utf8",
+  );
 }
 
 //======================================🔴读取世界观
