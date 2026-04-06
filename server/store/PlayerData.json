@@ -1,45 +1,33 @@
 {
   "name": "齐尘",
-  "age": 21,
+  "age": 18,
   "gender": "男",
-  "background": "齐尘曾为一名天才弟子，然而因为一场意外失去了修炼资质，从此沦为普通散修。他带着仇恨与不甘，踏上复仇之路，愤怒与痛苦将助他再度崛起。",
+  "background": "齐尘是一个流浪散修，行走在各个坊市之间，碰巧获得一枚来自古老遗迹的天级法器碎片。此片之力虽不全，但却为他后续的修行打下了基础。",
   "level": "炼气期一层",
-  "cultivation": "0/200",
-  "spiritual_root_type": "火灵根",
-  "spiritual_root_grade": "二品",
-  "spiritual_power": "40/100",
+  "numerical_cultivation": "0/200",
+  "spiritual_root_type": "变异灵根",
+  "spiritual_root_grade": "无",
+  "spiritual_power": "25/100",
   "potential": "8/20",
-  "fortune": "15/20",
+  "fortune": "8/20",
   "comprehension": "10/20",
   "talent": [
-    "逆袭之意：(经历过无数挫折后的坚定信念，修炼速度加快)"
-  ],
-  "movement_technique": [
-    {
-      "name": "火影步",
-      "grade": "黄阶中品",
-      "level": "初入",
-      "effect": "提升自身速度，并能留下短暂火焰轨迹。"
-    }
-  ],
-  "other_technique": [
-    {
-      "name": "隐匿术",
-      "grade": "黄阶上品",
-      "effect": "能够短时间内隐藏气息，避开敌人观察。"
-    },
-    {
-      "name": "炼丹术",
-      "grade": "黄阶中品",
-      "effect": "基础炼丹，能够制作简单丹药，增加修为。"
-    }
+    "机缘巧合:(能够在危险中总是寻找到意外的帮助)"
   ],
   "combat_technique": [
     {
-      "name": "烈焰掌",
-      "grade": "黄阶上品",
-      "level": "大成",
-      "effect": "以火焰为主的掌法，攻击时能增加火焰伤害。"
+      "name": "破空剑法",
+      "grade": "地阶下品",
+      "level": "初入",
+      "effect": "剑光如虹，破空而出，造成风压。"
+    }
+  ],
+  "movement_technique": [
+    {
+      "name": "穿云术",
+      "grade": "地阶下品",
+      "level": "初入",
+      "effect": "令自己在空中移动时不受阻碍，速度更快。"
     }
   ]
 }

@@ -11,7 +11,6 @@ env.allowRemoteModels = false;
 //下载到本地的embedding模型
 env.localModelPath = "D:/xiuxian/xiuxian/server/models";
 const {
-  history,
   query_backpack,
   query_playerStats,
   addItem,
@@ -19,10 +18,8 @@ const {
   add_Cultivation_Technique,
   add_Technique,
   Add_AiItems,
-  new_items,
-  backpack,
-  PlayerData,
-  StateMachina,
+  query_AiItems,
+  query_StateMachina,
   ChangePlot,
   AddMaps,
   ChangeLocation,
@@ -30,6 +27,7 @@ const {
   AddQueryResult,
   assistantadd,
   useradd,
+  query_history,
 } = require("../fs.js"); //一个点代表当前目录,两个点才是上级目录
 const eventBus = require("./eventBus");
 //此处要注意,这里导入文件,会优先执行一次文件内部的所有顶层代码,如果有log,也会执行.
@@ -161,7 +159,12 @@ async function chatWithAI(userInput, Game_start) {
   const QueryResult = [];
   // //突破情况
   // const breakthrough = [];
-
+  //状态机实例
+  const StateMachina = await query_StateMachina();
+  const history = await query_history();
+  const backpack = await query_backpack();
+  const PlayerData = await query_playerStats();
+  const AiItems = await query_AiItems();
   //判断是否进入第二层生成剧情
   let Proceed = "";
   //🔴 1, 数据查询层
@@ -313,13 +316,13 @@ ${userInput}
         //查询背包和面板
         if (toolname === "Query_Backpack") {
           console.log("调用读取背包工具中....");
-          const result = query_backpack(); // 内部已经化为字符串了
-          QueryResult.push(result);
+
+          QueryResult.push(`背包如下:${JSON.stringify(backpack, null, 2)}`);
         }
         if (toolname === "Query_PlayerStats") {
           console.log("调用读取面板工具中....");
-          const result = query_playerStats(); // 内部已经化为字符串了
-          QueryResult.push(result);
+
+          QueryResult.push(`面板如下:${JSON.stringify(PlayerData, null, 2)}`);
         }
 
         //判断是否进入第二层,第三层
@@ -403,7 +406,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           tool_choice: "auto",
         }),
       };
-      console.log("当前实体已经有:", new_items);
+      console.log("当前实体已经有:", AiItems);
       console.log("准备第二次发送api");
       const level2_response = await fetch(API_URL, level2_Aiconfiguration);
 
@@ -500,7 +503,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 跳过:Skip
 
 【可用信息】
-已经生成的实体:${new_items}
+已经生成的实体:${AiItems}
 ---------------------------
 剧情:${JSON.stringify(StateMachina.Plot, null, 2)}
 
@@ -798,7 +801,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   - 每个短句或每个场景切换，都要独立成段。
   - 关键转折、情绪爆发、重要信息、选项说明，必须单独成行。
   - 段落之间用空行隔开，营造呼吸感。
-  - 参考下面的排版风格：
+  - 参考下面的排版风格(也需要你自行发挥,不要无脑复制)：
 道友，你此番为求突破炼气一层的修炼资源，特意赶来正在招新的玄剑门碰机缘。
 
 刚走到山门处，就撞上了值守的外门弟子赵磊。
@@ -817,7 +820,6 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 
 硬接他一剑少说也要半残，眼看剑锋就要落到你肩头，避无可避！
 
-现在,你要怎么做!
   - 故事开头必须从0开始,不许插叙!比如突然插入战斗,主角处境等等,一切都要从零开始!比如主角睁开眼,引入眼帘的是XXXX,代入感才强
   - 不要一上来就丢出战斗等等,不用那么快进入剧情,起承转合之前,还需要有一个铺垫,描述角色现在在哪
   - 当你需要转折剧情的时候,比如从铺垫->起,可以这样写:"当你正疑惑自己在哪时,一道声音打断你的思绪(后接剧情中的'起')"
@@ -873,6 +875,8 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 //🔴 5, 工具执行层
 async function layer5(level4_Replay, userInput) {
   try {
+    const backpack = await query_backpack();
+    const PlayerData = await query_playerStats();
     console.log("🔴 5, 进入工具执行层.");
 
     const level5_prompt = `
@@ -896,8 +900,8 @@ ${level4_Replay}
 ${userInput}
 ---
 【3. 背包和面板】
-背包:${JSON.stringify(backpack, null, 2)}
-面板:${JSON.stringify(PlayerData, null, 2)}
+背包:${backpack}
+面板:${PlayerData}
 
 
 【4. 可用工具列表】
@@ -1103,12 +1107,14 @@ ${userInput}
           //......
         }
       }
+      const PlayerData = query_playerStats();
+      const backpack = query_backpack();
       console.log("工具执行结束,一共使用工具次数:", count);
       console.log(
         "当前位置是后端ai第五层,先检查第五层背包和面板是否有误,先看背包:",
-        JSON.stringify(backpack, null, 2),
+        backpack,
       );
-      console.log("这个是面板:", JSON.stringify(PlayerData, null, 2));
+      console.log("这个是面板:", PlayerData);
 
       return { backpack, PlayerData };
     }

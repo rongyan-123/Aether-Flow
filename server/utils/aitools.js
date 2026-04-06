@@ -1,6 +1,10 @@
-const { PlayerData, StateMachina } = require("D:/xiuxian/xiuxian/server/fs");
+const {
+  query_playerStats,
+  query_StateMachina,
+} = require("D:/xiuxian/xiuxian/server/fs");
 const { World_Rule } = require("./ai");
-
+const PlayerData = query_playerStats();
+const StateMachina = query_StateMachina();
 //======================== ai调用工具 ============================
 const tools = [
   //查询背包

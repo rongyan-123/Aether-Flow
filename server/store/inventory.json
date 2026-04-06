@@ -2,41 +2,18 @@
   "data": [
     {
       "name": "灵石",
-      "value": 100,
-      "mount": 20
+      "value": 10,
+      "mount": 30
     },
     {
-      "name": "火系符箓",
-      "value": 15,
-      "mount": 5
-    },
-    {
-      "name": "基础丹药",
-      "value": 30,
-      "mount": 8
-    },
-    {
-      "name": "火系妖兽材料",
-      "value": 25,
-      "mount": 2
-    },
-    {
-      "id": 1775297261773,
-      "name": "火焰刀",
-      "value": 100,
+      "name": "灵气恢复丹",
+      "value": 40,
       "mount": 1
     },
     {
-      "id": 1775297261774,
-      "name": "火焰心丹",
-      "value": 50,
-      "mount": 2
-    },
-    {
-      "id": 1775297261775,
-      "name": "中品灵石",
-      "value": 100,
-      "mount": 30
+      "name": "法器碎片",
+      "value": 200,
+      "mount": 1
     }
   ]
 }

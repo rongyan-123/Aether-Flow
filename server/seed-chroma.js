@@ -1,5 +1,5 @@
 const { ChromaClient } = require("chromadb");
-const fs = require("fs");
+const fs = require("fs").promises;
 const { pipeline, env } = require("chromadb-default-embed");
 
 // 🔥 禁止联网，强制从本地加载
@@ -14,7 +14,7 @@ const client = new ChromaClient({ path: "http://localhost:1111" });
 async function seed() {
   try {
     // 直接读取 AllData.json 文件
-    const raw = fs.readFileSync("./StaticData/AllData.json", "utf8");
+    const raw = await fs.readFile("./StaticData/AllData.json", "utf8");
     const parsed = JSON.parse(raw);
     const dataArray = parsed.AllData; // 现在 dataArray 就是条目数组
     //遍历数据库,收集数据

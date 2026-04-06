@@ -5,7 +5,7 @@ const PORT = 3000;
 const cors = require("cors");
 const { chatWithAI, initRAG, layer5 } = require("./utils/ai.js");
 const { Init_AI } = require("./utils/Init_ai.js");
-const fs = require("fs");
+const fs = require("fs").promises;
 const { Readable } = require("stream");
 const { StateMachina } = require("./fs.js");
 const eventBus = require("./utils/eventBus.js");
@@ -59,16 +59,16 @@ app.post("/api/game_start", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   const playerFilePath = "./store/PlayerData.json";
-  const rawPlayer = fs.readFileSync(playerFilePath, "utf8");
+  const rawPlayer = await fs.readFile(playerFilePath, "utf8");
   let playerData = JSON.parse(rawPlayer); // 这是真正的数据对象
   //更新后端数据
   try {
     const inventoryFilePath = "./store/inventory.json";
-    const rawInventory = fs.readFileSync(inventoryFilePath, "utf8");
+    const rawInventory = await fs.readFile(inventoryFilePath, "utf8");
     const inventory = JSON.parse(rawInventory);
     //修改玩家面板
     playerData = req.body.item.player_data;
-    await fs.writeFileSync(
+    await fs.writeFile(
       //写回背包文件,持久化处理
       "./store/PlayerData.json",
       JSON.stringify(playerData, null, 2),
@@ -76,7 +76,7 @@ app.post("/api/game_start", async (req, res) => {
     );
     //修改背包
     inventory.data = req.body.item.player_inventory; // 如果前端传入的是数组
-    await fs.writeFileSync(
+    await fs.writeFile(
       //写回背包文件,持久化处理
       "./store/inventory.json",
       JSON.stringify(inventory, null, 2),

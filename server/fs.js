@@ -1,19 +1,23 @@
-const fs = require("fs");
+const fs = require("fs").promises;
 
 //==========================🔴读取用户面板
-const rawData = fs.readFileSync("./store/PlayerData.json", "utf8");
-const PlayerData = JSON.parse(rawData);
 
 //💡1,读取面板
-function query_playerStats() {
-  console.log("进入读取面板工具");
-  const raw = fs.readFileSync("./store/PlayerData.json", "utf8");
-  const player = JSON.parse(raw);
-  return `用户面板如下:${JSON.stringify(player, null, 2)}`;
+async function query_playerStats() {
+  try {
+    console.log("进入读取面板工具");
+    const raw = await fs.readFile("./store/PlayerData.json", "utf8");
+    const player = JSON.parse(raw);
+    return player;
+  } catch (err) {
+    console.log("当前位置:fs.js中的读取面板函数,报错为:", err);
+  }
 }
 
 //💡2,增加修炼功法
-function add_Cultivation_Technique(obj) {
+async function add_Cultivation_Technique(obj) {
+  const rawData = await fs.readFile("./store/PlayerData.json", "utf8");
+  const PlayerData = JSON.parse(rawData);
   //先遍历功法列表,看看有没有相同的
   for (const index of PlayerData.cultivation_technique) {
     if (index.name === obj.name) {
@@ -25,7 +29,7 @@ function add_Cultivation_Technique(obj) {
   //如果没发现相同,再加进去
   PlayerData.cultivation_technique.push(obj);
   console.log("成功加入功法");
-  fs.writeFileSync(
+  await fs.writeFile(
     //写回背包文件,持久化处理
     "./store/PlayerData.json",
     JSON.stringify(PlayerData, null, 2),
@@ -35,9 +39,11 @@ function add_Cultivation_Technique(obj) {
 }
 
 //💡3, 增加技艺
-function add_Technique(obj) {
+async function add_Technique(obj) {
   console.log("成功进入增加技艺工具");
   console.log("当前技艺:", obj);
+  const rawData = await fs.readFile("./store/PlayerData.json", "utf8");
+  const PlayerData = JSON.parse(rawData);
   //==============增加战技
   if (obj.type === "战技") {
     console.log("成功进入增加战技工具,当前战技名字:", obj.name);
@@ -52,7 +58,7 @@ function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.combat_technique.push(obj);
     console.log("成功学会战技");
-    fs.writeFileSync(
+    await fs.writeFile(
       //写回背包文件,持久化处理
       "./store/PlayerData.json",
       JSON.stringify(PlayerData, null, 2),
@@ -72,7 +78,7 @@ function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.movement_technique.push(obj);
     console.log("成功学会身法");
-    fs.writeFileSync(
+    await fs.writeFile(
       //写回背包文件,持久化处理
       "./store/PlayerData.json",
       JSON.stringify(PlayerData, null, 2),
@@ -92,7 +98,7 @@ function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.other_technique.push(obj);
     console.log("成功学习法门");
-    fs.writeFileSync(
+    await fs.writeFile(
       //写回背包文件,持久化处理
       "./store/PlayerData.json",
       JSON.stringify(PlayerData, null, 2),
@@ -103,26 +109,26 @@ function add_Technique(obj) {
 }
 
 //======================🔴读取用户背包
-const rawInventory = fs.readFileSync("./store/inventory.json", "utf8");
-const backpack = JSON.parse(rawInventory); //转为对象
 console.log("成功读取背包");
 
 //💡1, 查询背包
-function query_backpack() {
+async function query_backpack() {
   console.log("进入读取背包工具");
-  const raw = fs.readFileSync("./store/inventory.json", "utf8");
+  const raw = await fs.readFile("./store/inventory.json", "utf8");
   const backpack = JSON.parse(raw);
-  return `背包内物品如下:${JSON.stringify(backpack, null, 2)}`;
+  return backpack;
 }
 //💡2,增加物品函数
-function addItem(obj) {
+async function addItem(obj) {
+  const rawInventory = await fs.readFile("./store/inventory.json", "utf8");
+  const backpack = JSON.parse(rawInventory); //转为对象
   console.log("成功进入添加物品工具");
   for (const item of backpack.data) {
     //找到物品
     if (obj.name === item.name) {
       console.log("找到物品");
       item.mount += obj.mount;
-      fs.writeFileSync(
+      await fs.writeFile(
         //写回背包文件,持久化处理
         "./store/inventory.json",
         JSON.stringify(backpack, null, 2),
@@ -138,7 +144,7 @@ function addItem(obj) {
     value: obj.value,
     mount: obj.mount,
   });
-  fs.writeFileSync(
+  await fs.writeFile(
     //写回背包文件,持久化处理
     "./store/inventory.json",
     JSON.stringify(backpack, null, 2),
@@ -150,7 +156,9 @@ function addItem(obj) {
 }
 
 //💡3,减少物品函数
-function reduceItem(obj) {
+async function reduceItem(obj) {
+  const rawInventory = await fs.readFile("./store/inventory.json", "utf8");
+  const backpack = JSON.parse(rawInventory); //转为对象
   //使用遍历,来做到同类物品堆叠,注意,此处只对一个对象进行操作
   for (const item of backpack.data) {
     //如果发现同名,就直接把数量相减,然后返回就行
@@ -164,7 +172,7 @@ function reduceItem(obj) {
       if (item.mount <= 0) {
         backpack.data = backpack.data.filter((i) => i.name !== obj.name);
       }
-      fs.writeFileSync(
+      await fs.writeFile(
         //写回背包文件,持久化处理
         "./store/inventory.json",
         JSON.stringify(backpack, null, 2),
@@ -178,19 +186,34 @@ function reduceItem(obj) {
 }
 
 //=======================================🔴读取历史记录
-const rawhistory = fs.readFileSync(
-  "./AiHistoryStores/ChatHistory.json",
-  "utf8",
-);
-const history = JSON.parse(rawhistory);
+
+//💡1, 查询
+async function query_history() {
+  try {
+    const rawhistory = await fs.readFile(
+      "./AiHistoryStores/ChatHistory.json",
+      "utf8",
+    );
+    const history = JSON.parse(rawhistory);
+    return history;
+  } catch (err) {
+    console.log("fs文件中读取世界观出现错误:", err);
+  }
+}
+
 //新增历史记录
-function useradd(input) {
+async function useradd(input) {
+  const rawhistory = await fs.readFile(
+    "./AiHistoryStores/ChatHistory.json",
+    "utf8",
+  );
+  const history = JSON.parse(rawhistory);
   history.chatHistory.push({
     id: Date.now(), //唯一标识,必须加,否则无法绑定和渲染
     role: "user",
     content: input ?? "",
   });
-  fs.writeFileSync(
+  await fs.writeFile(
     //写回,持久化处理
     "./AiHistoryStores/ChatHistory.json",
     JSON.stringify(history, null, 2),
@@ -198,13 +221,18 @@ function useradd(input) {
   );
 }
 
-function assistantadd(input) {
+async function assistantadd(input) {
+  const rawhistory = await fs.readFile(
+    "./AiHistoryStores/ChatHistory.json",
+    "utf8",
+  );
+  const history = JSON.parse(rawhistory);
   history.chatHistory.push({
     id: Date.now(),
     role: "assistant",
     content: input ?? "",
   });
-  fs.writeFileSync(
+  await fs.writeFile(
     //写回,持久化处理
     "./AiHistoryStores/ChatHistory.json",
     JSON.stringify(history, null, 2),
@@ -213,17 +241,35 @@ function assistantadd(input) {
 }
 
 //======================================🔴读取世界观
-const rawAllData = fs.readFileSync("./StaticData/AllData.json", "utf8");
-const AllData = JSON.parse(rawAllData); //传出的是一个对象,里面的内容为{ AllData:[....] }
-//console.log(AllData);
+
+async function query_World() {
+  try {
+    const rawAllData = await fs.readFile("./StaticData/AllData.json", "utf8");
+    const AllData = JSON.parse(rawAllData); //传出的是一个对象,里面的内容为{ AllData:[....] }
+    //console.log(AllData);
+    return AllData;
+  } catch (err) {
+    console.log("fs文件中读取世界观出现错误:", err);
+  }
+}
 
 //======================================🔴读取实体
-const mid = fs.readFileSync("./store/AI_generateItems.json", "utf8");
-const new_items = JSON.parse(mid);
 
-function Add_AiItems(name) {
+async function query_AiItems() {
+  try {
+    const mid = await fs.readFile("./store/AI_generateItems.json", "utf8");
+    const new_items = JSON.parse(mid);
+    return new_items;
+  } catch (err) {
+    console.log("fs文件中读取世界观出现错误:", err);
+  }
+}
+
+async function Add_AiItems(name) {
+  const mid = await fs.readFile("./store/AI_generateItems.json", "utf8");
+  const new_items = JSON.parse(mid);
   new_items.push(name);
-  fs.writeFileSync(
+  await fs.writeFile(
     //写回,持久化处理
     "./store/AI_generateItems.json",
     JSON.stringify(new_items, null, 2),
@@ -232,20 +278,38 @@ function Add_AiItems(name) {
 }
 
 //======================================🔴状态机
-const State_mid = fs.readFileSync("./store/user_StateMachina.json", "utf8");
-const StateMachina = JSON.parse(State_mid);
-if (!StateMachina.userInput) StateMachina.userInput = "";
 
-function ChangePlot(newPlot) {
+async function query_StateMachina() {
+  try {
+    const State_mid = await fs.readFile(
+      "./store/user_StateMachina.json",
+      "utf8",
+    );
+    const StateMachina = JSON.parse(State_mid);
+    if (!StateMachina.userInput) StateMachina.userInput = "";
+    return StateMachina;
+  } catch (err) {
+    console.log("fs文件中读取世界观出现错误:", err);
+  }
+}
+
+async function ChangePlot(newPlot) {
+  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const StateMachina = JSON.parse(State_mid);
+  if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.Plot = newPlot;
-  fs.writeFileSync(
+  await fs.writeFile(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
-function ChangeLocation(newLocation) {
+async function ChangeLocation(newLocation) {
+  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const StateMachina = JSON.parse(State_mid);
+  if (!StateMachina.userInput) StateMachina.userInput = "";
+  const Maps = query_Map();
   const finder = Maps.find((m) => m.name === newLocation);
   if (finder) {
     console.log("成功找到当前地图!", finder);
@@ -257,25 +321,31 @@ function ChangeLocation(newLocation) {
       newLocation,
     );
   }
-  fs.writeFileSync(
+  await fs.writeFile(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
-function ChangeUserInput(userinput) {
+async function ChangeUserInput(userinput) {
+  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const StateMachina = JSON.parse(State_mid);
+  if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.userInput = userinput;
-  fs.writeFileSync(
+  await fs.writeFile(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
-function AddQueryResult(items) {
+async function AddQueryResult(items) {
+  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const StateMachina = JSON.parse(State_mid);
+  if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.QueryResult = items;
-  fs.writeFileSync(
+  await fs.writeFile(
     "./store/user_StateMachina.json",
     JSON.stringify(StateMachina, null, 2),
     "utf8",
@@ -283,18 +353,32 @@ function AddQueryResult(items) {
 }
 
 //======================================🔴读取地图
-const map_mid = fs.readFileSync("./store/Maps.json", "utf8");
-const Maps = JSON.parse(map_mid);
+
+async function query_Map() {
+  try {
+    const map_mid = await fs.readFile("./store/Maps.json", "utf8");
+    const Maps = JSON.parse(map_mid);
+    return Maps;
+  } catch (err) {
+    console.log("fs文件中读取世界观出现错误:", err);
+  }
+}
 
 //新增地图
-function AddMaps(new_map) {
+async function AddMaps(new_map) {
+  const map_mid = await fs.readFile("./store/Maps.json", "utf8");
+  const Maps = JSON.parse(map_mid);
   console.log(
     "进入fs文件中的地图修改函数AddMaps,这是读取到的地图,请检查其是否为对象:",
     new_map,
   );
 
   Maps.push(new_map);
-  fs.writeFileSync("./store/Maps.json", JSON.stringify(Maps, null, 2), "utf8");
+  await fs.writeFile(
+    "./store/Maps.json",
+    JSON.stringify(Maps, null, 2),
+    "utf8",
+  );
 }
 
 //======================================🔴函数测试
@@ -305,13 +389,11 @@ if (require.main === module) {
 
 // ======================================🔴一次性导出所有变量
 module.exports = {
-  PlayerData,
-  backpack,
-  history,
-  AllData,
-  new_items,
-  StateMachina,
-  Maps,
+  query_history,
+  query_World,
+  query_AiItems,
+  query_StateMachina,
+  query_Map,
   AddMaps,
   ChangeLocation,
   ChangePlot,
