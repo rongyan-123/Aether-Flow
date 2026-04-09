@@ -2,18 +2,18 @@
   "data": [
     {
       "name": "灵石",
-      "value": 10,
-      "mount": 30
+      "value": 20,
+      "mount": 10
     },
     {
-      "name": "灵气恢复丹",
-      "value": 40,
+      "name": "初级灵诀残篇",
+      "value": 80,
       "mount": 1
     },
     {
-      "name": "法器碎片",
-      "value": 200,
-      "mount": 1
+      "name": "疗伤丹",
+      "value": 30,
+      "mount": 3
     }
   ]
 }

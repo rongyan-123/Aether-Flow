@@ -1,33 +1,24 @@
 {
-  "name": "齐尘",
-  "age": 18,
   "gender": "男",
-  "background": "齐尘是一个流浪散修，行走在各个坊市之间，碰巧获得一枚来自古老遗迹的天级法器碎片。此片之力虽不全，但却为他后续的修行打下了基础。",
-  "level": "炼气期一层",
-  "numerical_cultivation": "0/200",
-  "spiritual_root_type": "变异灵根",
-  "spiritual_root_grade": "无",
-  "spiritual_power": "25/100",
-  "potential": "8/20",
-  "fortune": "8/20",
-  "comprehension": "10/20",
+  "background": "齐尘是一个无名散修，游历各地，积累了不少经验与资源，虽然实力平庸，却因机缘巧合获得了一本残缺的灵诀，决心借此逆天改命。",
+  "level": "炼气期二层",
+  "cultivation_technique": [
+    {
+      "name": "无",
+      "grade": "无",
+      "effect": "无"
+    }
+  ],
+  "spiritual_root_type": "木灵根",
+  "spiritual_root_grade": "二品",
+  "spiritual_power": "30/100",
+  "potential": "10/20",
+  "name": "齐尘",
+  "age": 22,
+  "comprehension": "12/20",
+  "fortune": "10/20",
+  "root_bone": 6,
   "talent": [
-    "机缘巧合:(能够在危险中总是寻找到意外的帮助)"
-  ],
-  "combat_technique": [
-    {
-      "name": "破空剑法",
-      "grade": "地阶下品",
-      "level": "初入",
-      "effect": "剑光如虹，破空而出，造成风压。"
-    }
-  ],
-  "movement_technique": [
-    {
-      "name": "穿云术",
-      "grade": "地阶下品",
-      "level": "初入",
-      "effect": "令自己在空中移动时不受阻碍，速度更快。"
-    }
+    "灵感频现：在关键时刻能感知到机缘，运气较好。"
   ]
 }

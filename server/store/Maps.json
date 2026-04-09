@@ -292,5 +292,68 @@
       "玄剑门外门区域",
       "玄剑门内门区域"
     ]
+  },
+  {
+    "name": "玄剑门外门公共修炼洞府",
+    "region": "青玄山",
+    "danger_level": "安全",
+    "description": "外门弟子免费修炼场所，内设基础聚灵阵，灵气浓度尚可",
+    "power_distribution": "归玄剑门外门执事阁统一管理，无私人势力占据",
+    "level_range": "炼气一层~炼气十层",
+    "rules": "禁止私斗，单次使用最长三日，使用前需到执事阁登记",
+    "peace_orno": "和平",
+    "inhabitants": [
+      "齐尘",
+      "零散外门低阶弟子"
+    ],
+    "bound_items": [
+      "基础聚灵阵盘"
+    ],
+    "bound_locations": [
+      "玄剑门外门执事阁",
+      "玄剑门外门弟子居所"
+    ]
+  },
+  {
+    "name": "玄剑门后山药田",
+    "region": "青玄山",
+    "danger_level": "低危",
+    "description": "种植各类低阶灵药的梯田，周边偶尔有低阶妖兽侵扰",
+    "power_distribution": "归属玄剑门外门管辖，由外门弟子轮值看守",
+    "level_range": "炼气一层~炼气五层",
+    "rules": "禁止私采灵药，需定期浇灌、驱虫、驱赶妖兽",
+    "peace_orno": "和平",
+    "inhabitants": [
+      "齐尘"
+    ],
+    "bound_items": [
+      "青木灵液",
+      "低阶灵药"
+    ],
+    "bound_locations": [
+      "玄剑门外门后山入口",
+      "玄剑门后山枯木林"
+    ]
+  },
+  {
+    "name": "玄剑门后山秘境",
+    "region": "青玄山",
+    "danger_level": "中危",
+    "description": "隐藏在深山密林中的上古修士洞府，外围有迷幻禁制",
+    "power_distribution": "暂无势力占据，内部有低阶守护妖兽活动",
+    "level_range": "炼气三层~筑基期",
+    "rules": "禁制排斥金丹及以上修士进入，内部高阶术法威力受限",
+    "peace_orno": "混乱",
+    "inhabitants": [
+      "低阶守护妖兽"
+    ],
+    "bound_items": [
+      "厚土诀残页（下半）",
+      "低阶修炼资源"
+    ],
+    "bound_locations": [
+      "玄剑门后山药田",
+      "玄剑门外门后山禁地"
+    ]
   }
 ]
