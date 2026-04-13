@@ -67,7 +67,7 @@ const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = "";
+const API_KEY = "ec9ed2fe-7afd-4bad-9f45-6f317a1c85f0";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -134,15 +134,15 @@ const World_Rule = `
 //1,数据查询层:第一次发送api,调用查询工具,获取对应数据
 //2,执行工具层:第二次发送api,根据数据选择接下来要执行的工具,比如添加物品,添加功法等等,以后的生成剧情也会在这里，战斗判断也会在这里
 //3,面向用户层:第三次发送api,读取第一层的查询结果,还有第二层的工具返回结果,给用户做出最后的总结
-
+const player_id = "test_player_001";
 //该函数拿到的是ai回复,类型是字符串
 async function chatWithAI(userInput, Game_start) {
   console.time();
   console.log("成功进入chatWithAI");
   console.log("用户问题", userInput);
   //存入历史记录
-  useradd(userInput);
-  ChangeUserInput(userInput);
+  await useradd(userInput);
+  await ChangeUserInput(userInput);
   // 新增这行，看控制台打印了几次
   console.log(
     "=== chatWithAI 函数被触发 ===",
@@ -162,8 +162,14 @@ async function chatWithAI(userInput, Game_start) {
   //状态机实例
   const StateMachina = await query_StateMachina();
   const history = await query_history();
-  const backpack = await query_backpack();
-  const PlayerData = await query_playerStats();
+  const backpack = await query_backpack(player_id);
+  const PlayerData = await query_playerStats(player_id);
+  console.log(
+    "先打印一下backpack和playerData看看是否正常",
+    backpack,
+    PlayerData,
+  );
+
   const AiItems = await query_AiItems();
   //判断是否进入第二层生成剧情
   let Proceed = "";
@@ -239,7 +245,7 @@ ${userInput}
         role: "system",
         content: prompt,
       },
-      ...history.chatHistory,
+      ...(history?.chatHistory || []),
     ];
     const Aiconfiguration = {
       //配置对象
@@ -343,7 +349,7 @@ ${userInput}
   }
 
   //🔴 2, 叙事规划层
-  if (Proceed === "yes") {
+  if (Proceed === "no") {
     try {
       console.log("🔴 2, 进入第二层,叙事规划层.");
       eventBus.emit("ai-progress", "layer2", "正在生成专属剧情...");
@@ -389,7 +395,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           role: "system",
           content: level2_prompt,
         },
-        ...history.chatHistory,
+        ...(history?.chatHistory || []),
       ];
       const level2_Aiconfiguration = {
         method: "POST",
@@ -464,7 +470,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
   }
 
   //🔴 3, 动态细节层
-  if (Proceed === "yes") {
+  if (Proceed === "no") {
     try {
       console.log("🔴 3, 进入第三层,动态细节层.");
       eventBus.emit("ai-progress", "layer3", "正在生成动态世界...");
@@ -528,7 +534,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
           role: "system",
           content: level3_prompt,
         },
-        ...history.chatHistory,
+        ...(history?.chatHistory || []),
       ];
       const level3_Aiconfiguration = {
         method: "POST",
@@ -842,7 +848,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
         role: "system",
         content: level4_prompt,
       },
-      ...history.chatHistory,
+      ...(history?.chatHistory || []),
     ];
     const Aiconfiguration = {
       //配置对象
@@ -875,10 +881,11 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 //🔴 5, 工具执行层
 async function layer5(level4_Replay, userInput) {
   try {
-    const backpack = await query_backpack();
-    const PlayerData = await query_playerStats();
+    //将第四层回复送入历史记录中
+    await assistantadd(level4_Replay);
     console.log("🔴 5, 进入工具执行层.");
-
+    const backpack_old = await query_backpack(player_id);
+    const PlayerData_old = await query_playerStats(player_id);
     const level5_prompt = `
 【角色设定】:你是五层架构中的第五层【最终执行者】。你的唯一职责是：基于第四层推演出的结果，严格从给定的工具列表中选择最合适的工具执行
 
@@ -900,8 +907,8 @@ ${level4_Replay}
 ${userInput}
 ---
 【3. 背包和面板】
-背包:${backpack}
-面板:${PlayerData}
+背包:${backpack_old}
+面板:${PlayerData_old}
 
 
 【4. 可用工具列表】
@@ -931,23 +938,18 @@ ${userInput}
 第四层推演结果：你与金丹初期的魔修激战，不敌受伤，魔修遁入魔窟。你的灵力因战斗消耗减少50点。
 用户原始问题：我要击杀那个魔修。
 你的行动：
-- 调用 Backpack_reduceitems，参数：items: [{ name: "飞剑", value: 500, mount: 1 }]
 - 调用 Player_changeAttribute，参数：: spiritual_power -50
 
 现在，请基于以上规则，根据实际输入执行任务。
 `;
 
-    //先把第四层回复存入后端的数据库
-    assistantadd(level4_Replay);
-
-    //新message2
+    //第五层不需要查看历史记录
     const level5_messages = [
       {
         id: 1,
         role: "system",
         content: level5_prompt,
       },
-      ...history.chatHistory,
     ];
     const Aiconfiguration = {
       //配置对象
@@ -957,18 +959,6 @@ ${userInput}
         Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        //支持founction_calling功能的模型:
-        //[200额度]:
-        // gpt-3.5-turbo, gpt-4o-mini , gpt-4.1-mini, gpt-4.1-nano
-        // gpt-5-mini , gpt-5-nano
-        //[30额度]:
-        // deepseek-v3   ,  deepseek-v3-2-exp
-        //[5额度]:
-        //gpt-5.2、gpt-5.1、gpt-5   gpt-4o、gpt-4.1
-
-        //不支持fc功能的模型,只能用来纯思考,别用就行:
-        //deepseek-r1   (一天30次)
-
         model: LLM,
         messages: level5_messages,
         temperature: 0.7,
@@ -1029,7 +1019,7 @@ ${userInput}
           let count = 0;
           for (const item of toolArg.items) {
             count++;
-            addItem(item); //每次遍历数组都只添加一个对象
+            await addItem(player_id, item); //每次遍历数组都只添加一个对象
           }
           console.log(`成功添加${count}件物品到背包!`);
           //由于是批量添加,所以ai返回的每一个数组里面,都要进行解析,看看它是否一口气返回了多个数组
@@ -1041,23 +1031,18 @@ ${userInput}
         //批量减少背包物品
         if (toolname === "Backpack_reduceitems") {
           let count = 0;
-          //原for循环
-          // const returncontent = []; //暂时存储减少物品后返回的结果,之后再统一丢进toolResult
-          // for (const item of toolArg.items) {
-          //   count++;
-          //   returncontent.push(backpack.reduce(item));
-          //   console.log(returncontent);
-          // }
-          //简写:
-          const returncontent = toolArg.items.map((item) => {
+          const returncontent = []; // 恢复存储结果的数组
+
+          for (const item of toolArg.items) {
             count++;
-            // 拿到reduce方法返回的结果，包装成和添加一致的列表项
-            const useResult = reduceItem(item);
-            return `- ${useResult}`; // 用- 开头，和添加的列表格式完全对齐
-          });
-          console.log(`获得:`, returncontent);
+            // 现在可以使用await
+            const useResult = await reduceItem(player_id, item);
+            returncontent.push(`- ${useResult}`); // 包装成和添加一致的列表项
+            console.log(`当前减少物品结果：`, useResult);
+          }
 
           console.log(`成功使用${count}件物品!`);
+          console.log(`获得:`, returncontent);
         }
 
         //  增加功法
@@ -1065,7 +1050,7 @@ ${userInput}
           console.log("ai调用增加功法工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          add_Cultivation_Technique(toolArg);
+          await add_Cultivation_Technique(player_id, toolArg);
         }
 
         //  增加技艺
@@ -1073,7 +1058,7 @@ ${userInput}
           console.log("ai调用增加技艺工具,增加:", toolArg.name);
           console.log("当前toolArg内容为:", toolArg);
 
-          add_Technique(toolArg);
+          await add_Technique(player_id, toolArg);
         }
 
         // //突破判断
@@ -1095,7 +1080,7 @@ ${userInput}
         if (toolname === "Current_Location") {
           console.log("进入修改地图状态机的工具");
           console.log("修改的新地图为:", toolArg.location);
-          ChangeLocation(toolArg.location);
+          await ChangeLocation(toolArg.location);
         }
 
         //突破
@@ -1107,8 +1092,8 @@ ${userInput}
           //......
         }
       }
-      const PlayerData = query_playerStats();
-      const backpack = query_backpack();
+      const backpack = await query_backpack(player_id);
+      const PlayerData = await query_playerStats(player_id);
       console.log("工具执行结束,一共使用工具次数:", count);
       console.log(
         "当前位置是后端ai第五层,先检查第五层背包和面板是否有误,先看背包:",

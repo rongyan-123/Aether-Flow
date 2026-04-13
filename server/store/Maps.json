@@ -355,5 +355,49 @@
       "玄剑门后山药田",
       "玄剑门外门后山禁地"
     ]
+  },
+  {
+    "name": "玄剑门外门大殿",
+    "region": "青玄山",
+    "danger_level": "安全",
+    "description": "外门核心建筑，朱红飞檐庄严肃穆，是外门议事之地",
+    "power_distribution": "归外门大执事管辖，执法堂拥有巡查监督权",
+    "level_range": "炼气三层~筑基期",
+    "rules": "禁止私斗，需持传唤凭证入内，议事恪守礼仪",
+    "peace_orno": "和平",
+    "inhabitants": [
+      "外门大执事",
+      "墨玄"
+    ],
+    "bound_items": [
+      "外门贡献登记册",
+      "内门选拔名额令牌"
+    ],
+    "bound_locations": [
+      "玄剑门外门弟子居所",
+      "玄剑门外门兑换处"
+    ]
+  },
+  {
+    "name": "玄剑门后山杂役处",
+    "region": "青玄山",
+    "danger_level": "安全",
+    "description": "位于后山山脚，是处罚犯错弟子劳作的区域，环境简陋",
+    "power_distribution": "由外门执事统一管辖，无其他势力介入",
+    "level_range": "炼气一层~炼气九层",
+    "rules": "禁止私斗，每日需完成指定杂役，不得擅自离开",
+    "peace_orno": "和平",
+    "inhabitants": [
+      "赵坤",
+      "李虎"
+    ],
+    "bound_items": [
+      "低级清洁符",
+      "杂役制式服饰"
+    ],
+    "bound_locations": [
+      "玄剑门后山枯木林",
+      "玄剑门后山药田"
+    ]
   }
 ]

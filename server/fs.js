@@ -1,23 +1,28 @@
+const { AsyncMutex } = require("./AsyncMutex");
+const {
+  QueryPlayer,
+  UpdatePlayer,
+  QueryInventory,
+  UpdateInventory,
+} = require("./dao/playerDAO");
+const mutex = new AsyncMutex();
 const fs = require("fs").promises;
 
 //==========================🔴读取用户面板
-
 //💡1,读取面板
-async function query_playerStats() {
+async function query_playerStats(id) {
   try {
     console.log("进入读取面板工具");
-    const raw = await fs.readFile("./store/PlayerData.json", "utf8");
-    const player = JSON.parse(raw);
-    return player;
+    const raw = QueryPlayer(id);
+    return raw;
   } catch (err) {
     console.log("当前位置:fs.js中的读取面板函数,报错为:", err);
   }
 }
 
 //💡2,增加修炼功法
-async function add_Cultivation_Technique(obj) {
-  const rawData = await fs.readFile("./store/PlayerData.json", "utf8");
-  const PlayerData = JSON.parse(rawData);
+async function add_Cultivation_Technique(id, obj) {
+  const PlayerData = QueryPlayer(id);
   //先遍历功法列表,看看有没有相同的
   for (const index of PlayerData.cultivation_technique) {
     if (index.name === obj.name) {
@@ -29,21 +34,16 @@ async function add_Cultivation_Technique(obj) {
   //如果没发现相同,再加进去
   PlayerData.cultivation_technique.push(obj);
   console.log("成功加入功法");
-  await fs.writeFile(
-    //写回背包文件,持久化处理
-    "./store/PlayerData.json",
-    JSON.stringify(PlayerData, null, 2),
-    "utf8",
-  );
+  UpdatePlayer(id, PlayerData);
+
   return `已加入新功法!${obj.name},品阶为:${obj.grade}`;
 }
 
 //💡3, 增加技艺
-async function add_Technique(obj) {
+async function add_Technique(id, obj) {
   console.log("成功进入增加技艺工具");
   console.log("当前技艺:", obj);
-  const rawData = await fs.readFile("./store/PlayerData.json", "utf8");
-  const PlayerData = JSON.parse(rawData);
+  const PlayerData = QueryPlayer(id);
   //==============增加战技
   if (obj.type === "战技") {
     console.log("成功进入增加战技工具,当前战技名字:", obj.name);
@@ -58,12 +58,8 @@ async function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.combat_technique.push(obj);
     console.log("成功学会战技");
-    await fs.writeFile(
-      //写回背包文件,持久化处理
-      "./store/PlayerData.json",
-      JSON.stringify(PlayerData, null, 2),
-      "utf8",
-    );
+    UpdatePlayer(id, PlayerData);
+
     return `已加入新战技!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
   }
   //=============身法增加
@@ -78,12 +74,8 @@ async function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.movement_technique.push(obj);
     console.log("成功学会身法");
-    await fs.writeFile(
-      //写回背包文件,持久化处理
-      "./store/PlayerData.json",
-      JSON.stringify(PlayerData, null, 2),
-      "utf8",
-    );
+    UpdatePlayer(id, PlayerData);
+
     return `已加入新身法!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
   }
   //=============其他法门增加
@@ -98,12 +90,8 @@ async function add_Technique(obj) {
     //如果没发现相同,再加进去
     PlayerData.other_technique.push(obj);
     console.log("成功学习法门");
-    await fs.writeFile(
-      //写回背包文件,持久化处理
-      "./store/PlayerData.json",
-      JSON.stringify(PlayerData, null, 2),
-      "utf8",
-    );
+    UpdatePlayer(id, PlayerData);
+
     return `已加入新法门!${obj.name},品阶为:${obj.grade},境界为${obj.level}`;
   }
 }
@@ -112,28 +100,22 @@ async function add_Technique(obj) {
 console.log("成功读取背包");
 
 //💡1, 查询背包
-async function query_backpack() {
+async function query_backpack(id) {
   console.log("进入读取背包工具");
-  const raw = await fs.readFile("./store/inventory.json", "utf8");
-  const backpack = JSON.parse(raw);
+  const backpack = QueryInventory(id);
+
   return backpack;
 }
 //💡2,增加物品函数
-async function addItem(obj) {
-  const rawInventory = await fs.readFile("./store/inventory.json", "utf8");
-  const backpack = JSON.parse(rawInventory); //转为对象
+async function addItem(id, obj) {
+  const backpack = QueryInventory(id);
   console.log("成功进入添加物品工具");
   for (const item of backpack.data) {
     //找到物品
     if (obj.name === item.name) {
       console.log("找到物品");
       item.mount += obj.mount;
-      await fs.writeFile(
-        //写回背包文件,持久化处理
-        "./store/inventory.json",
-        JSON.stringify(backpack, null, 2),
-        "utf8",
-      );
+      UpdateInventory(id, backpack);
       return `成功加入物品:${obj.name},价值为:${obj.value},数量为:${obj.mount},当前总数为:${item.mount}`;
     }
   }
@@ -144,21 +126,16 @@ async function addItem(obj) {
     value: obj.value,
     mount: obj.mount,
   });
-  await fs.writeFile(
-    //写回背包文件,持久化处理
-    "./store/inventory.json",
-    JSON.stringify(backpack, null, 2),
-    "utf8",
-  );
+  UpdateInventory(id, backpack);
+
   console.log("成功添加物品", obj.name);
-  return `由于没有在物品栏找到物品,所以直接加入新物品(这句话不要给用户):
+  return `由于没有在物品栏找到物品,所以直接加入新物品:
       成功加入物品:${obj.name},价值:${obj.value},数量为:${obj.mount}`;
 }
 
 //💡3,减少物品函数
-async function reduceItem(obj) {
-  const rawInventory = await fs.readFile("./store/inventory.json", "utf8");
-  const backpack = JSON.parse(rawInventory); //转为对象
+async function reduceItem(id, obj) {
+  const backpack = QueryInventory(id);
   //使用遍历,来做到同类物品堆叠,注意,此处只对一个对象进行操作
   for (const item of backpack.data) {
     //如果发现同名,就直接把数量相减,然后返回就行
@@ -172,12 +149,7 @@ async function reduceItem(obj) {
       if (item.mount <= 0) {
         backpack.data = backpack.data.filter((i) => i.name !== obj.name);
       }
-      await fs.writeFile(
-        //写回背包文件,持久化处理
-        "./store/inventory.json",
-        JSON.stringify(backpack, null, 2),
-        "utf8",
-      );
+      UpdateInventory(id, backpack);
       return `成功减少背包物品,失去物品:${obj.name},失去数量:${obj.mount}`;
     }
   }
@@ -203,41 +175,57 @@ async function query_history() {
 
 //新增历史记录
 async function useradd(input) {
-  const rawhistory = await fs.readFile(
-    "./AiHistoryStores/ChatHistory.json",
-    "utf8",
-  );
-  const history = JSON.parse(rawhistory);
-  history.chatHistory.push({
-    id: Date.now(), //唯一标识,必须加,否则无法绑定和渲染
-    role: "user",
-    content: input ?? "",
-  });
-  await fs.writeFile(
-    //写回,持久化处理
-    "./AiHistoryStores/ChatHistory.json",
-    JSON.stringify(history, null, 2),
-    "utf8",
-  );
+  await mutex.lock();
+  try {
+    const rawhistory = await fs.readFile(
+      "./AiHistoryStores/ChatHistory.json",
+      "utf8",
+    );
+    const history = JSON.parse(rawhistory);
+    history.chatHistory.push({
+      id: Date.now(), //唯一标识,必须加,否则无法绑定和渲染
+      role: "user",
+      content: input ?? "",
+    });
+    await fs.writeFile(
+      //写回,持久化处理
+      "./AiHistoryStores/ChatHistory.json",
+      JSON.stringify(history, null, 2),
+      "utf8",
+    );
+  } catch (err) {
+    console.log("后端fs新增user历史记录时报错", err);
+    throw err;
+  } finally {
+    await mutex.unlock();
+  }
 }
 
 async function assistantadd(input) {
-  const rawhistory = await fs.readFile(
-    "./AiHistoryStores/ChatHistory.json",
-    "utf8",
-  );
-  const history = JSON.parse(rawhistory);
-  history.chatHistory.push({
-    id: Date.now(),
-    role: "assistant",
-    content: input ?? "",
-  });
-  await fs.writeFile(
-    //写回,持久化处理
-    "./AiHistoryStores/ChatHistory.json",
-    JSON.stringify(history, null, 2),
-    "utf8",
-  );
+  await mutex.lock();
+  try {
+    const rawhistory = await fs.readFile(
+      "./AiHistoryStores/ChatHistory.json",
+      "utf8",
+    );
+    const history = JSON.parse(rawhistory);
+    history.chatHistory.push({
+      id: Date.now(),
+      role: "assistant",
+      content: input ?? "",
+    });
+    await fs.writeFile(
+      //写回,持久化处理
+      "./AiHistoryStores/ChatHistory.json",
+      JSON.stringify(history, null, 2),
+      "utf8",
+    );
+  } catch (err) {
+    console.log("后端fs新增assistant历史记录时报错", err);
+    throw err;
+  } finally {
+    await mutex.unlock();
+  }
 }
 
 //======================================🔴读取世界观
@@ -309,7 +297,7 @@ async function ChangeLocation(newLocation) {
   const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
   const StateMachina = JSON.parse(State_mid);
   if (!StateMachina.userInput) StateMachina.userInput = "";
-  const Maps = query_Map();
+  const Maps = await query_Map();
   const finder = Maps.find((m) => m.name === newLocation);
   if (finder) {
     console.log("成功找到当前地图!", finder);

@@ -253,8 +253,13 @@ async function Select_Model(item) {
     body: JSON.stringify({ item }),
   }).catch((error) => {
     console.error("user_selected.vue\\Select_Model游戏开始失败:", error);
+    throw error;
   });
 
+  if (!response.ok) {
+    console.error("API 授权失败/请求错误");
+    return "抱歉，API 请求失败（请换个模型）";
+  }
   ///流式输出
   //拿到二进制数据,getReader是'流'的专属函数,只要是这种数据流,都可以访问getReader,与SSE端口无关
   const reader = await response.body.getReader();
@@ -278,7 +283,7 @@ async function Select_Model(item) {
           body: JSON.stringify({ fullText: fullAIText }),
         });
         const data = await res.json();
-        console.log("✅ 第五层执行结果：", data);
+        console.log("此处是前端解析流式输出处,✅ 第五层执行结果：", data);
         //同样修改一次,保证每次的前端数据都是最新的
         backpack.setBackpackData(data.backpack.data);
         player.$state = data.PlayerData;
