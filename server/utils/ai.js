@@ -67,7 +67,7 @@ const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = "ec9ed2fe-7afd-4bad-9f45-6f317a1c85f0";
+const API_KEY = "";
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
