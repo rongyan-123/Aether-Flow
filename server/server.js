@@ -1,3 +1,4 @@
+require("dotenv").config();
 console.log("我是修仙后端，我启动了！");
 const express = require("express");
 const app = express();
@@ -12,6 +13,80 @@ const { query_StateMachina } = require("./fs.js");
 
 app.use(cors()); //跨域访问需要,比如端口8081访问端口3000
 app.use(express.json()); //加了才能解析前端发送的json数据
+
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+// 【定制化安全配置】适配前后端分离修仙游戏项目，不是无脑全量开启
+app.use(
+  helmet({
+    // 1. 内容安全策略：解决XSS风险，适配你的前端地址、流式接口
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // 适配Vue前端
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+        connectSrc: [
+          "'self'",
+          "http://localhost:3000",
+          "wss:",
+          "https://ark.cn-beijing.volces.com",
+          "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+        ], // 放行你的后端接口、豆包AI地址
+        imgSrc: ["'self'", "data:", "https:"],
+        fontSrc: ["'self'", "https:"],
+      },
+    },
+    // 2. 跨域资源策略：适配前后端分离
+    crossOriginResourcePolicy: { policy: "same-site" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    // 3. 禁用XSS防护的老方案，用CSP替代（更安全）
+    xssFilter: false,
+    // 4. 禁止iframe嵌套你的页面，防点击劫持
+    frameguard: { action: "deny" },
+    // 5. 强制HTTPS（生产环境开启，开发环境关闭）
+    hsts:
+      process.env.NODE_ENV === "production"
+        ? { maxAge: 15552000, includeSubDomains: true }
+        : false,
+  }),
+);
+// ===================== 1. 通用基础限流：所有接口默认规则 =====================
+const baseLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1分钟窗口
+  max: 60, // 普通接口1分钟最多60次请求
+  message: { code: 429, msg: "请求过于频繁，请1分钟后再试" },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // 限流触发时打日志，方便排查刷接口的行为
+  handler: (req, res) => {
+    console.warn(`[限流触发] IP:${req.ip} 接口:${req.path} 触发频率限制`);
+    res.status(429).json(this.message);
+  },
+});
+app.use(baseLimiter);
+
+// ===================== 2. 核心高成本接口：严格限流（AI接口） =====================
+// 你的AI接口调用豆包有成本，必须严格限制，防止被刷爆
+const aiStrictLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1分钟窗口
+  max: 15, // 1分钟最多15次AI请求，完全适配游戏正常操作
+  message: { code: 429, msg: "道友请留步！操作过于频繁，先调息片刻再试吧~" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+// 只给AI相关接口应用严格限流
+app.use("/api/game_start", aiStrictLimiter);
+app.use("/api/chat", aiStrictLimiter); // 你的聊天接口
+app.use("/api/run-layer5", aiStrictLimiter); // 你的第五层执行接口
+
+// ===================== 3. 玩家数据读写接口：中等限流 =====================
+const dataOperateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  message: { code: 429, msg: "数据操作过于频繁，请稍后再试" },
+});
+app.use("/api/save_player", dataOperateLimiter);
+app.use("/api/get_player", dataOperateLimiter);
 
 app.get("/", (req, res) => {
   res.send("欢迎来到修仙后端");

@@ -1,5 +1,6 @@
 const { pipeline, env } = require("chromadb-default-embed");
 const { ChromaClient } = require("chromadb");
+
 const {
   layer1Tools,
   layer2Tools,
@@ -67,7 +68,7 @@ const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = "";
+const API_KEY = process.env.doubao_API_KEY;
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -907,8 +908,8 @@ ${level4_Replay}
 ${userInput}
 ---
 【3. 背包和面板】
-背包:${backpack_old}
-面板:${PlayerData_old}
+背包:${JSON.stringify(backpack_old, null, 2)}
+面板:${JSON.stringify(PlayerData_old, null, 2)}
 
 
 【4. 可用工具列表】

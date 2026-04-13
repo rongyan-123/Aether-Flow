@@ -7,6 +7,52 @@ const {
 } = require("./dao/playerDAO");
 const mutex = new AsyncMutex();
 const fs = require("fs").promises;
+const fsSync = require("fs");
+const path = require("path");
+
+// Helper to resolve file paths relative to this file (server folder)
+function resolveServerPath(rel) {
+  // rel is like './store/xxx.json' or './AiHistoryStores/ChatHistory.json'
+  return path.resolve(__dirname, rel);
+}
+
+function ensureFileExists(fullPath, defaultContent) {
+  const dir = path.dirname(fullPath);
+  if (!fsSync.existsSync(dir)) {
+    fsSync.mkdirSync(dir, { recursive: true });
+  }
+  if (!fsSync.existsSync(fullPath)) {
+    fsSync.writeFileSync(fullPath, defaultContent, "utf8");
+  }
+}
+
+// Ensure commonly required files exist with safe defaults
+ensureFileExists(
+  resolveServerPath("./AiHistoryStores/ChatHistory.json"),
+  JSON.stringify({ chatHistory: [] }, null, 2),
+);
+ensureFileExists(
+  resolveServerPath("./store/user_StateMachina.json"),
+  JSON.stringify(
+    {
+      userInput: "",
+      Plot: {},
+      QueryResult: [],
+      now_location: {},
+      current_Plot: "",
+    },
+    null,
+    2,
+  ),
+);
+ensureFileExists(
+  resolveServerPath("./store/AI_generateItems.json"),
+  JSON.stringify([], null, 2),
+);
+ensureFileExists(
+  resolveServerPath("./store/Maps.json"),
+  JSON.stringify([], null, 2),
+);
 
 //==========================🔴读取用户面板
 //💡1,读取面板
@@ -110,7 +156,7 @@ async function query_backpack(id) {
 async function addItem(id, obj) {
   const backpack = QueryInventory(id);
   console.log("成功进入添加物品工具");
-  for (const item of backpack.data) {
+  for (const item of backpack) {
     //找到物品
     if (obj.name === item.name) {
       console.log("找到物品");
@@ -120,7 +166,7 @@ async function addItem(id, obj) {
     }
   }
   //如果遍历完,没找到物品,那就新增
-  backpack.data.push({
+  backpack.push({
     id: Date.now(),
     name: obj.name,
     value: obj.value,
@@ -135,9 +181,9 @@ async function addItem(id, obj) {
 
 //💡3,减少物品函数
 async function reduceItem(id, obj) {
-  const backpack = QueryInventory(id);
+  let backpack = QueryInventory(id);
   //使用遍历,来做到同类物品堆叠,注意,此处只对一个对象进行操作
-  for (const item of backpack.data) {
+  for (const item of backpack) {
     //如果发现同名,就直接把数量相减,然后返回就行
     if (obj.name === item.name) {
       //如果数量不够(即消耗的数量>自己拥有的数量)
@@ -147,7 +193,7 @@ async function reduceItem(id, obj) {
       item.mount -= obj.mount;
       //如果物品为0了,就从背包中清除
       if (item.mount <= 0) {
-        backpack.data = backpack.data.filter((i) => i.name !== obj.name);
+        backpack = backpack.filter((i) => i.name !== obj.name);
       }
       UpdateInventory(id, backpack);
       return `成功减少背包物品,失去物品:${obj.name},失去数量:${obj.mount}`;
@@ -163,7 +209,7 @@ async function reduceItem(id, obj) {
 async function query_history() {
   try {
     const rawhistory = await fs.readFile(
-      "./AiHistoryStores/ChatHistory.json",
+      resolveServerPath("./AiHistoryStores/ChatHistory.json"),
       "utf8",
     );
     const history = JSON.parse(rawhistory);
@@ -178,7 +224,7 @@ async function useradd(input) {
   await mutex.lock();
   try {
     const rawhistory = await fs.readFile(
-      "./AiHistoryStores/ChatHistory.json",
+      resolveServerPath("./AiHistoryStores/ChatHistory.json"),
       "utf8",
     );
     const history = JSON.parse(rawhistory);
@@ -189,7 +235,7 @@ async function useradd(input) {
     });
     await fs.writeFile(
       //写回,持久化处理
-      "./AiHistoryStores/ChatHistory.json",
+      resolveServerPath("./AiHistoryStores/ChatHistory.json"),
       JSON.stringify(history, null, 2),
       "utf8",
     );
@@ -205,7 +251,7 @@ async function assistantadd(input) {
   await mutex.lock();
   try {
     const rawhistory = await fs.readFile(
-      "./AiHistoryStores/ChatHistory.json",
+      resolveServerPath("./AiHistoryStores/ChatHistory.json"),
       "utf8",
     );
     const history = JSON.parse(rawhistory);
@@ -216,7 +262,7 @@ async function assistantadd(input) {
     });
     await fs.writeFile(
       //写回,持久化处理
-      "./AiHistoryStores/ChatHistory.json",
+      resolveServerPath("./AiHistoryStores/ChatHistory.json"),
       JSON.stringify(history, null, 2),
       "utf8",
     );
@@ -232,7 +278,10 @@ async function assistantadd(input) {
 
 async function query_World() {
   try {
-    const rawAllData = await fs.readFile("./StaticData/AllData.json", "utf8");
+    const rawAllData = await fs.readFile(
+      resolveServerPath("./StaticData/AllData.json"),
+      "utf8",
+    );
     const AllData = JSON.parse(rawAllData); //传出的是一个对象,里面的内容为{ AllData:[....] }
     //console.log(AllData);
     return AllData;
@@ -245,7 +294,10 @@ async function query_World() {
 
 async function query_AiItems() {
   try {
-    const mid = await fs.readFile("./store/AI_generateItems.json", "utf8");
+    const mid = await fs.readFile(
+      resolveServerPath("./store/AI_generateItems.json"),
+      "utf8",
+    );
     const new_items = JSON.parse(mid);
     return new_items;
   } catch (err) {
@@ -254,12 +306,15 @@ async function query_AiItems() {
 }
 
 async function Add_AiItems(name) {
-  const mid = await fs.readFile("./store/AI_generateItems.json", "utf8");
+  const mid = await fs.readFile(
+    resolveServerPath("./store/AI_generateItems.json"),
+    "utf8",
+  );
   const new_items = JSON.parse(mid);
   new_items.push(name);
   await fs.writeFile(
     //写回,持久化处理
-    "./store/AI_generateItems.json",
+    resolveServerPath("./store/AI_generateItems.json"),
     JSON.stringify(new_items, null, 2),
     "utf8",
   );
@@ -270,7 +325,7 @@ async function Add_AiItems(name) {
 async function query_StateMachina() {
   try {
     const State_mid = await fs.readFile(
-      "./store/user_StateMachina.json",
+      resolveServerPath("./store/user_StateMachina.json"),
       "utf8",
     );
     const StateMachina = JSON.parse(State_mid);
@@ -282,19 +337,25 @@ async function query_StateMachina() {
 }
 
 async function ChangePlot(newPlot) {
-  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const State_mid = await fs.readFile(
+    resolveServerPath("./store/user_StateMachina.json"),
+    "utf8",
+  );
   const StateMachina = JSON.parse(State_mid);
   if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.Plot = newPlot;
   await fs.writeFile(
-    "./store/user_StateMachina.json",
+    resolveServerPath("./store/user_StateMachina.json"),
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
 async function ChangeLocation(newLocation) {
-  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const State_mid = await fs.readFile(
+    resolveServerPath("./store/user_StateMachina.json"),
+    "utf8",
+  );
   const StateMachina = JSON.parse(State_mid);
   if (!StateMachina.userInput) StateMachina.userInput = "";
   const Maps = await query_Map();
@@ -310,31 +371,37 @@ async function ChangeLocation(newLocation) {
     );
   }
   await fs.writeFile(
-    "./store/user_StateMachina.json",
+    resolveServerPath("./store/user_StateMachina.json"),
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
 async function ChangeUserInput(userinput) {
-  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const State_mid = await fs.readFile(
+    resolveServerPath("./store/user_StateMachina.json"),
+    "utf8",
+  );
   const StateMachina = JSON.parse(State_mid);
   if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.userInput = userinput;
   await fs.writeFile(
-    "./store/user_StateMachina.json",
+    resolveServerPath("./store/user_StateMachina.json"),
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
 }
 
 async function AddQueryResult(items) {
-  const State_mid = await fs.readFile("./store/user_StateMachina.json", "utf8");
+  const State_mid = await fs.readFile(
+    resolveServerPath("./store/user_StateMachina.json"),
+    "utf8",
+  );
   const StateMachina = JSON.parse(State_mid);
   if (!StateMachina.userInput) StateMachina.userInput = "";
   StateMachina.QueryResult = items;
   await fs.writeFile(
-    "./store/user_StateMachina.json",
+    resolveServerPath("./store/user_StateMachina.json"),
     JSON.stringify(StateMachina, null, 2),
     "utf8",
   );
@@ -344,7 +411,10 @@ async function AddQueryResult(items) {
 
 async function query_Map() {
   try {
-    const map_mid = await fs.readFile("./store/Maps.json", "utf8");
+    const map_mid = await fs.readFile(
+      resolveServerPath("./store/Maps.json"),
+      "utf8",
+    );
     const Maps = JSON.parse(map_mid);
     return Maps;
   } catch (err) {
@@ -354,7 +424,10 @@ async function query_Map() {
 
 //新增地图
 async function AddMaps(new_map) {
-  const map_mid = await fs.readFile("./store/Maps.json", "utf8");
+  const map_mid = await fs.readFile(
+    resolveServerPath("./store/Maps.json"),
+    "utf8",
+  );
   const Maps = JSON.parse(map_mid);
   console.log(
     "进入fs文件中的地图修改函数AddMaps,这是读取到的地图,请检查其是否为对象:",
@@ -363,7 +436,7 @@ async function AddMaps(new_map) {
 
   Maps.push(new_map);
   await fs.writeFile(
-    "./store/Maps.json",
+    resolveServerPath("./store/Maps.json"),
     JSON.stringify(Maps, null, 2),
     "utf8",
   );
