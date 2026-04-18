@@ -1,5 +1,5 @@
 const env = process.env.NODE_ENV || "development";
-require("dotenv").config({ path: `.env.${env}` });
+require("dotenv").config({ path: `../.env.${env}` });
 console.log("我是修仙后端，我启动了！");
 const express = require("express");
 const app = express();
