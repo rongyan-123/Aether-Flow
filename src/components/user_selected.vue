@@ -233,7 +233,10 @@ const emit = defineEmits(["user-selected"]);
 
 //引入pinia仓库实例
 const Chat = useChatHistoryStore();
-
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "http://47.114.98.109:3000"
+    : "http://localhost:3000";
 //选择模版后的执行逻辑
 async function Select_Model(item) {
   console.log("成功选择模板:", item);
@@ -245,7 +248,7 @@ async function Select_Model(item) {
   player.$patch(item.player_data); //用patch合并,直接修改可能破坏响应式,导致无法重新渲染
   //2, 更新后端,同时发送api,直接生成对话
   emit("user-selected");
-  const response = await fetch("http://localhost:3000/api/game_start", {
+  const response = await fetch(BASE_URL + "/api/game_start", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -277,7 +280,7 @@ async function Select_Model(item) {
       console.log("流式传输结束");
       // 👇 传输完成，调用后端第五层
       try {
-        const res = await fetch("http://localhost:3000/api/run-layer5", {
+        const res = await fetch(BASE_URL + "/api/run-layer5", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fullText: fullAIText }),

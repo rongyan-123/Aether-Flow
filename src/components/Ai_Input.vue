@@ -36,7 +36,10 @@ function handler(data) {
   console.log("数据传输成功:", data);
   userInformation = data;
 }
-
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "http://47.114.98.109:3000"
+    : "http://localhost:3000";
 //发送到后端的函数
 async function sendHistory() {
   console.log("检查用户输入", userInformation);
@@ -62,7 +65,7 @@ async function sendHistory() {
   // 清空输入框,这样中间量就不会消失
   userInput.value = "";
 
-  const response = await fetch("http://localhost:3000/api/chat", {
+  const response = await fetch(BASE_URL + "/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -86,7 +89,7 @@ async function sendHistory() {
       console.log("流式传输结束");
       // 👇 传输完成，调用后端第五层
       try {
-        const res = await fetch("http://localhost:3000/api/run-layer5", {
+        const res = await fetch(BASE_URL + "/api/run-layer5", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fullText: fullAIText }),

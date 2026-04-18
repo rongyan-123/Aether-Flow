@@ -1,4 +1,5 @@
-require("dotenv").config();
+const env = process.env.NODE_ENV || "development";
+require("dotenv").config({ path: `.env.${env}` });
 console.log("我是修仙后端，我启动了！");
 const express = require("express");
 const app = express();
@@ -11,7 +12,14 @@ const eventBus = require("./utils/eventBus.js");
 const { UpdatePlayer, UpdateInventory } = require("./dao/playerDAO.js");
 const { query_StateMachina } = require("./fs.js");
 
-app.use(cors()); //跨域访问需要,比如端口8081访问端口3000
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
+
+//跨域访问需要,比如端口8081访问端口3000
 app.use(express.json()); //加了才能解析前端发送的json数据
 
 const helmet = require("helmet");
@@ -152,17 +160,13 @@ app.post("/api/game_start", async (req, res) => {
 
   //判断游戏是否开始
   let Game_start = false;
-  //后端发送函数
-  const SendLayer_Messages = (content) => {
-    res.write(`data: ${content}\n\n`);
-  };
+  // //后端发送函数
+  // const SendLayer_Messages = (content) => {
+  //   res.write(`data: ${content}\n\n`);
+  // };
 
   //发送给ai应用层🔴🔴🔴
-  const reply = await chatWithAI(
-    req.body.midInput,
-    Game_start,
-    SendLayer_Messages,
-  );
+  const reply = await chatWithAI(req.body.midInput, Game_start);
 
   // ✅【核心修复】判断返回值：是流就转发，不是流就直接返回JSON
   if (reply && typeof reply.getReader === "function") {
@@ -203,6 +207,8 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+
   console.log("SSE已启动");
   const listener = (layerType, msg) => {
     res.write(`event: ${layerType}\n`);
