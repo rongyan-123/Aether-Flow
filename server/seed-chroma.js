@@ -1,12 +1,11 @@
 const { ChromaClient } = require("chromadb");
 const fs = require("fs").promises;
 const { pipeline, env } = require("chromadb-default-embed");
-
+const path = require("path");
 // 🔥 禁止联网，强制从本地加载
 env.allowRemoteModels = false;
 // 🔥 指定本地模型根目录（指向包含 Xenova 文件夹的父目录）
-env.localModelPath = "D:/xiuxian/xiuxian/server/models";
-
+env.localModelPath = path.join(__dirname, "models");
 //embedding项目地址:https://github.com/chroma-core/chromadb-default-embed
 //创建实例
 const client = new ChromaClient({ path: "http://localhost:1111" });

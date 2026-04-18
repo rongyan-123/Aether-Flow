@@ -1,6 +1,6 @@
 const { pipeline, env } = require("chromadb-default-embed");
 const { ChromaClient } = require("chromadb");
-
+const path = require("path");
 const {
   layer1Tools,
   layer2Tools,
@@ -10,7 +10,7 @@ const {
 //关闭自动寻找模型地址
 env.allowRemoteModels = false;
 //下载到本地的embedding模型
-env.localModelPath = "D:/xiuxian/xiuxian/server/models";
+env.localModelPath = path.join(__dirname, "../models");
 const {
   query_backpack,
   query_playerStats,

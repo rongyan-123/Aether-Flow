@@ -1,7 +1,4 @@
-const {
-  query_playerStats,
-  query_StateMachina,
-} = require("D:/xiuxian/xiuxian/server/fs");
+const { query_playerStats, query_StateMachina } = require("../fs");
 const { World_Rule } = require("./ai");
 const PlayerData = query_playerStats();
 const StateMachina = query_StateMachina();
