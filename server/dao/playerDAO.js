@@ -1,4 +1,4 @@
-const { getDB } = require("D:\\xiuxian\\xiuxian\\server\\db.js");
+const { getDB } = require("../db.js");
 
 const db = getDB();
 
