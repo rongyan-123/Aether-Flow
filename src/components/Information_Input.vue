@@ -25,10 +25,7 @@ let userInformation = reactive({
   name: "",
   sex: "",
 });
-const BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "http://47.114.98.109:3000"
-    : "http://localhost:3000";
+const BASE_URL = "/api";
 //游戏初始化阶段,单独处理一遍,发送api
 async function Game_Init() {
   console.log("成功获取数据", JSON.stringify(userInformation));
@@ -36,7 +33,7 @@ async function Game_Init() {
   emit("input-user");
   //发送api
   try {
-    const response = await fetch(BASE_URL + "/api/Game_Init", {
+    const response = await fetch(BASE_URL + "/Game_Init", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

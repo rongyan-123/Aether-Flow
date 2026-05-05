@@ -23,7 +23,7 @@ export const useChatHistoryStore = defineStore("ChatHistory", {
         isThinking: false,
         thinkingText: "",
       });
-    },
+    },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
     assistantChange(content) {
       //对象,是可以直接用参数引用的,修改它,同样会改变原对象,跟指针差不多
       const lastMsg = this.data[this.data.length - 1];

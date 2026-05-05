@@ -11,17 +11,33 @@ const { Readable } = require("stream");
 const eventBus = require("./utils/eventBus.js");
 const { UpdatePlayer, UpdateInventory } = require("./dao/playerDAO.js");
 const { query_StateMachina } = require("./fs.js");
-
+const allowedOrigins = [
+  "http://localhost:3001", // 你的 Vue 开发端口
+  "http://localhost:3000", // 备用端口
+  "http://47.114.98.109", // 线上环境
+  process.env.FRONTEND_URL, // 环境变量里的值
+];
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      // 允许没有 origin 的请求 (比如 curl 或同源请求)
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.startsWith("http://localhost")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS 不允许该源访问"));
+      }
+    },
     credentials: true,
   }),
 );
 
 //跨域访问需要,比如端口8081访问端口3000
 app.use(express.json()); //加了才能解析前端发送的json数据
-
+app.set("trust proxy", 1);
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 // 【定制化安全配置】适配前后端分离修仙游戏项目，不是无脑全量开启
@@ -31,21 +47,19 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // 适配Vue前端
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https:"],
         connectSrc: [
           "'self'",
           "http://localhost:3000",
-          "wss:",
+          "http://127.0.0.1:3000",
           "https://ark.cn-beijing.volces.com",
-          "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        ], // 放行你的后端接口、豆包AI地址
+        ],
         imgSrc: ["'self'", "data:", "https:"],
-        fontSrc: ["'self'", "https:"],
       },
     },
     // 2. 跨域资源策略：适配前后端分离
-    crossOriginResourcePolicy: { policy: "same-site" },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     // 3. 禁用XSS防护的老方案，用CSP替代（更安全）
     xssFilter: false,

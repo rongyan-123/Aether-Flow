@@ -1,3 +1,4 @@
+require("dotenv").config({ path: ".env.development" });
 const { pipeline, env } = require("chromadb-default-embed");
 const { ChromaClient } = require("chromadb");
 const path = require("path");
@@ -82,7 +83,7 @@ const API_KEY = process.env.doubao_API_KEY;
 //不支持fc功能的模型,只能用来纯思考,别用就行:
 //deepseek-r1   (一天30次)
 //const LLM = "gpt-3.5-turbo";
-const LLM = "doubao-seed-2-0-pro-260215";
+const LLM = "ep-m-20260221202117-dwrl4";
 
 //世界观设定
 const World_Rule = `
@@ -242,7 +243,6 @@ ${userInput}
     //创建最终的message
     const messages = [
       {
-        id: 1,
         role: "system",
         content: prompt,
       },
@@ -253,7 +253,7 @@ ${userInput}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY.trim()}`,
       },
       body: JSON.stringify({
         model: LLM,
@@ -392,7 +392,6 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 
       const level2_messages = [
         {
-          id: 1,
           role: "system",
           content: level2_prompt,
         },
@@ -402,7 +401,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${API_KEY.trim()}`,
         },
         body: JSON.stringify({
           model: LLM,
@@ -531,7 +530,6 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 `;
       const level3_messages = [
         {
-          id: 1,
           role: "system",
           content: level3_prompt,
         },
@@ -541,7 +539,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${API_KEY.trim()}`,
         },
         body: JSON.stringify({
           model: LLM,
@@ -845,7 +843,6 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
     //创建messages
     const level4_messages = [
       {
-        id: 1,
         role: "system",
         content: level4_prompt,
       },
@@ -856,7 +853,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY.trim()}`,
       },
       body: JSON.stringify({
         model: LLM,
@@ -947,7 +944,6 @@ ${userInput}
     //第五层不需要查看历史记录
     const level5_messages = [
       {
-        id: 1,
         role: "system",
         content: level5_prompt,
       },
@@ -957,7 +953,7 @@ ${userInput}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY.trim()}`,
       },
       body: JSON.stringify({
         model: LLM,
