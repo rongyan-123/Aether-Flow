@@ -1,4 +1,4 @@
-const { AsyncMutex } = require("./AsyncMutex");
+﻿const { AsyncMutex } = require("./AsyncMutex");
 const {
   QueryPlayer,
   UpdatePlayer,
@@ -69,6 +69,11 @@ async function query_playerStats(id) {
 //💡2,增加修炼功法
 async function add_Cultivation_Technique(id, obj) {
   const PlayerData = QueryPlayer(id);
+  // 【防御】玩家数据不存在时返回提示
+  if (!PlayerData) return "玩家数据不存在，请先创建角色";
+  // 【防御】功法列表为空时，初始化为空数组
+  if (!Array.isArray(PlayerData.cultivation_technique))
+    PlayerData.cultivation_technique = [];
   //先遍历功法列表,看看有没有相同的
   for (const index of PlayerData.cultivation_technique) {
     if (index.name === obj.name) {
@@ -90,6 +95,15 @@ async function add_Technique(id, obj) {
   console.log("成功进入增加技艺工具");
   console.log("当前技艺:", obj);
   const PlayerData = QueryPlayer(id);
+  // 【防御】玩家数据不存在时返回提示
+  if (!PlayerData) return "玩家数据不存在，请先创建角色";
+  // 【防御】各类技艺列表为空时，初始化为空数组
+  if (!Array.isArray(PlayerData.combat_technique))
+    PlayerData.combat_technique = [];
+  if (!Array.isArray(PlayerData.movement_technique))
+    PlayerData.movement_technique = [];
+  if (!Array.isArray(PlayerData.other_technique))
+    PlayerData.other_technique = [];
   //==============增加战技
   if (obj.type === "战技") {
     console.log("成功进入增加战技工具,当前战技名字:", obj.name);
@@ -154,7 +168,9 @@ async function query_backpack(id) {
 }
 //💡2,增加物品函数
 async function addItem(id, obj) {
-  const backpack = QueryInventory(id);
+  let backpack = QueryInventory(id);
+  // 【防御】背包数据不存在时，初始化为空数组
+  if (!Array.isArray(backpack)) backpack = [];
   console.log("成功进入添加物品工具");
   for (const item of backpack) {
     //找到物品
@@ -182,6 +198,8 @@ async function addItem(id, obj) {
 //💡3,减少物品函数
 async function reduceItem(id, obj) {
   let backpack = QueryInventory(id);
+  // 【防御】背包数据不存在时返回提示
+  if (!Array.isArray(backpack)) return "背包数据不存在";
   //使用遍历,来做到同类物品堆叠,注意,此处只对一个对象进行操作
   for (const item of backpack) {
     //如果发现同名,就直接把数量相减,然后返回就行

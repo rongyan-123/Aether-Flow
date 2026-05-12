@@ -69,7 +69,7 @@ const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 //const API_KEY = "sk-bM1XLNYL7b3hchiNNtHoW7ZJFb4YTt4voQEZmrN2pB88HouC";
 
 //豆包key
-const API_KEY = process.env.doubao_API_KEY;
+const API_KEY = process.env.ARK_API_KEY;
 //=========================== ai模型 ==========================
 //支持founction_calling功能的模型:
 //[200额度]:
@@ -253,7 +253,7 @@ ${userInput}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY.trim()}`,
+        Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         model: LLM,
@@ -801,7 +801,7 @@ ${JSON.stringify(StateMachina.now_location, null, 2)}
 - 回复中必须明确提及所有发生的变化（如灵力消耗、物品使用、状态改变），必须具体，以便第五层解读。
 - 语言生动形象，用大白话，带古风但不要文言文。
 - 不要出现任何技术术语（如“数值”、“API”、“工具”等）。
-- 所有实体,以及重要的东西,必须使用html的各种标签进行修饰!随意使用,包括加粗,改颜色,改为h1标题格式等等,让文字看起来更易读
+- 所有实体,以及重要的东西,必须使用html的各种标签进行修饰!随意使用,包括加粗,改颜色,改为h1标题格式等等,让文字看起来更易读,请使用 <span style="color: #FF4500">内容</span> 来表示有颜色的文字，严禁使用非标准的 <color> 标签。否则浏览器将无法解析
 - **输出格式必须严格遵循小说式分段：**
   - 每个短句或每个场景切换，都要独立成段。
   - 关键转折、情绪爆发、重要信息、选项说明，必须单独成行。

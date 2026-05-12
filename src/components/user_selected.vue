@@ -357,41 +357,50 @@ async function Select_Model(item) {
 .template-selector {
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: 24px;
   overflow-x: auto;
   padding: 20px;
   height: 100%;
   box-sizing: border-box;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
 }
 .template-card {
-  flex: 0 0 320px;
-  background: #f9f3e7;
-  border: 1px solid #e2d5c0;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  flex: 0 0 340px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  max-height: 90%;
+  max-height: 85%;
   overflow-y: auto;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.template-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 .card-header {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #5c3d2e;
-  border-bottom: 1px solid #dcc9a8;
-  margin-bottom: 12px;
-  padding-bottom: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #8b6914;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  letter-spacing: 2px;
+  font-family: 'Noto Serif SC', serif;
 }
 .field-row {
   margin: 6px 0;
-  line-height: 1.4;
-  font-size: 14px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #444;
 }
 .field-label {
   font-weight: 600;
-  color: #8b5a2b;
+  color: #888;
   display: inline-block;
   width: 80px;
   vertical-align: top;
@@ -409,40 +418,42 @@ async function Select_Model(item) {
   margin: 4px 0;
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px dashed #e2d5c0;
+  border-bottom: 1px solid #f0f0f0;
   padding: 4px 0;
 }
 .inv-name {
   font-weight: 500;
-  color: #5c3d2e;
+  color: #444;
 }
 .inv-value,
 .inv-mount {
-  color: #8b5a2b;
+  color: #888;
   margin-left: 8px;
 }
 .select-btn {
-  background: #8b5a2b;
+  background: #1a6dff;
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 10px 20px;
+  border-radius: 22px;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
   transition: background 0.2s;
 }
 .select-btn:hover {
-  background: #a0522d;
+  background: #0052d9;
 }
 .template-card::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 .template-card::-webkit-scrollbar-track {
-  background: #f1e5d3;
-  border-radius: 3px;
+  background: transparent;
 }
 .template-card::-webkit-scrollbar-thumb {
-  background: #c9a87c;
-  border-radius: 3px;
+  background-color: rgba(0,0,0,0.12);
+  border-radius: 2px;
 }
 </style>

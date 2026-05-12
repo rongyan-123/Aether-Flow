@@ -1,8 +1,15 @@
-const env = process.env.NODE_ENV || "development";
+﻿const env = process.env.NODE_ENV || "development";
 require("dotenv").config({ path: `../.env.${env}` });
 console.log("我是修仙后端，我启动了！");
 const express = require("express");
+const http = require("http");
+// 【修复431】Node.js 默认请求头限制只有 16KB，浏览器自动带的安全头部多时会超限
+// 把限制调大到 64KB 即可解决 431 Request Header Fields Too Large
+http.maxHeaderSize = 64 * 1024;
+
 const app = express();
+// 使用 http.createServer 显式设置 header 大小限制，比全局设置更可靠
+const server = http.createServer({ maxHeaderSize: 64 * 1024 }, app);
 const PORT = 3000;
 const cors = require("cors");
 const { chatWithAI, initRAG, layer5 } = require("./utils/ai.js");
@@ -11,6 +18,9 @@ const { Readable } = require("stream");
 const eventBus = require("./utils/eventBus.js");
 const { UpdatePlayer, UpdateInventory } = require("./dao/playerDAO.js");
 const { query_StateMachina } = require("./fs.js");
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 const allowedOrigins = [
   "http://localhost:3001", // 你的 Vue 开发端口
   "http://localhost:3000", // 备用端口
@@ -36,7 +46,6 @@ app.use(
 );
 
 //跨域访问需要,比如端口8081访问端口3000
-app.use(express.json()); //加了才能解析前端发送的json数据
 app.set("trust proxy", 1);
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
@@ -195,8 +204,6 @@ app.post("/api/game_start", async (req, res) => {
 });
 
 // 🔥 把这两行放在路由之前，限制改大一点（比如 50mb）
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 //🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴第五层🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
 // 【新增】专门执行第五层的接口
@@ -240,7 +247,7 @@ app.get("/api/stream", (req, res) => {
 //初始化函数
 const serverstart = async () => {
   await initRAG();
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log("成功进入修仙界");
     console.log(`接口:http://localhost:${PORT}`);
   });
