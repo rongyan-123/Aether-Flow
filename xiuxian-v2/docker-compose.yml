@@ -1,0 +1,48 @@
+﻿version: '3.8'
+
+services:
+  # 主数据库：PostgreSQL 15 + pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: xiuxian-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: xiuxian
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 向量数据库：ChromaDB (可选，如果不用 pgvector 的话)
+  # 你的 server 代码里之前用了 Chroma，这里保留兼容性
+  chroma:
+    image: chromadb/chroma
+    container_name: xiuxian-chroma
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+      - ./server/models:/models # 挂载本地模型目录
+    environment:
+      - IS_PERSISTENT=TRUE
+
+  # 可选：本地 LLM 服务 (如果不想用外部 API)
+  # ollama:
+  #   image: ollama/ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+
+volumes:
+  postgres_data:
+  chroma_data:
+  # ollama_data:
