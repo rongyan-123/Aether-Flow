@@ -1,111 +1,105 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
 import { useGameStore } from '@/stores/game'
-import { Button } from '@/components/ui/button'
-import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-// removed unused import
 
-type Template = {
+type Trope = {
   id: string
   name: string
-  description: string
-  stats: Record<string, string>
+  desc: string
+  icon: string
+  openingHint: string
 }
 
-const templates: Template[] = [
-  { id: 'wudang', name: '武当山弟子', description: '名门正派，道法自然，擅长以柔克刚', stats: { spiritual_root: '先天木灵根', alignment: '正道', sect: '武当派' } },
-  { id: 'modao', name: '魔道散修', description: '亦正亦邪，为求大道不择手段', stats: { spiritual_root: '变异暗灵根', alignment: '魔道', sect: '无' } },
-  { id: 'yaohu', name: '青丘狐妖', description: '妖族异类，天生魅惑，修行艰难', stats: { spiritual_root: '天道魅灵根', alignment: '中立', sect: '青丘' } },
+const tropes: Trope[] = [
+  { id: "feichai", name: "废柴流", desc: "主角资质极差，遭宗门/家族抛弃，后获奇遇逆袭成神", icon: "☕", openingHint: "资质低劣、被抛弃、遭遇嘲讽" },
+  { id: "tuihun", name: "退婚流", desc: "主角被未婚妻当众退婚，受尽羞辱，发奋修炼，最终强势打脸", icon: "💔", openingHint: "当众被退婚、羞辱、嘲讽" },
+  { id: "banzhuchihu", name: "扮猪吃虎流", desc: "主角表面平庸普通，实则隐藏实力，关键时刻一鸣惊人", icon: "🐷", openingHint: "隐藏实力、被轻视、关键时刻爆发" },
+  { id: "haoqiang", name: "豪强回归流", desc: "曾是顶级势力嫡系，因故流落凡间，多年后强势归来", icon: "👑", openingHint: "曾经辉煌、流落凡间、归来夺回一切" },
+  { id: "zhongtian", name: "种田流", desc: "不热衷战斗，专注炼丹炼器种药，靠技术和商业积累资本", icon: "🌾", openingHint: "专注辅助职业、商业积累、壮大势力" },
+  { id: "qiyu", name: "奇遇流", desc: "意外发现仙人遗迹秘宝，获得逆天传承，踏上强者之路", icon: "✨", openingHint: "发现遗迹、获得传承、踏上强者之路" },
+  { id: "dalian", name: "打脸流", desc: "主角被轻视嘲笑排挤，关键时刻展现实力", icon: "👊", openingHint: "被轻视、嘲笑、排挤，关键时刻爆发" },
+  { id: "jiaporenwang", name: "家破人亡流", desc: "一夜之间宗门被灭家族覆灭，主角背负血海深仇", icon: "💀", openingHint: "宗门被灭、家族覆灭、背负血海深仇" },
+  { id: "fuchou", name: "复仇流", desc: "主角曾被至交同门陷害身败名裂，今朝归来誓要讨回公道", icon: "🛡️", openingHint: "被陷害、身败名裂、归来复仇" },
+  { id: "tishen", name: "替身流", desc: "主角被当作他人替身，终有一天揭竿而起", icon: "🎭", openingHint: "被当作替身、失去自我、揭竿而起" },
+  { id: "beiguo", name: "背锅流", desc: "主角无辜替人背黑锅被世人唾弃，历经磨难后真相大白", icon: "🔗", openingHint: "无辜背锅、被世人唾弃、历经磨难" },
+  { id: "shitu", name: "师徒背叛流", desc: "主角为师父门派奉献一切却被无情抛弃，终让背叛者悔不当初", icon: "⚡", openingHint: "为师门奉献一切、被无情抛弃、另有机缘" },
+  { id: "zhuixu", name: "赘婿翻身流", desc: "主角入赘世家受尽白眼，一朝崛起让整个家族仰望", icon: "🏠", openingHint: "入赘世家、受尽白眼、一朝崛起" },
+  { id: "beizhu", name: "被逐出师门流", desc: "主角因资质平庸被赶出山门，后凭毅力与机缘成就远超师门", icon: "🚪", openingHint: "因资质被赶出山门、流浪、最终成就远超师门" },
+  { id: "sudi", name: "宿敌流", desc: "主角与命中宿敌从少年斗到中年，一路相爱相杀最终一决高低", icon: "⚔️", openingHint: "与宿敌纠缠、相爱相杀、最终对决" },
 ]
 
-
 function getLLMConfig() {
-  try { return JSON.parse(localStorage.getItem('xiuxian-llm-config') || '{}') } catch { return {} }
+  try { return JSON.parse(localStorage.getItem("xiuxian-llm-config") || "{}") } catch { return {} }
 }
+
 export function SelectScreen() {
-  const { setPhase, updateStats, setPlayer, addMessage, setLoading, setCurrentEvent, player } = useGameStore()
+  const { setPhase, setPlayer, addMessage, setLoading, setCurrentEvent, player } = useGameStore()
   const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLocalLoading] = useState(false)
-  const active = { player }
 
   const getCardClass = (id: string) => {
-    const base = 'p-6 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-105'
-    if (selected === id) return base + ' border-amber-500 bg-zinc-800/80 shadow-lg shadow-amber-500/20'
-    return base + ' border-zinc-700 bg-zinc-900 hover:bg-zinc-800/50'
+    const base = "p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02]" 
+    if (selected === id) return base + "border-amber-500 bg-zinc-800/80 shadow-lg shadow-amber-500/20" 
+    return base + "border-zinc-700 bg-zinc-900 hover:bg-zinc-800/50" 
   }
 
   const handleSelect = async () => {
-    if (!selected || loading || !active?.player) return
-    const template = templates.find(t => t.id === selected)
-    if (!template) return
-
-    updateStats(template.stats as any)
-    if (active.player) {
-      setPlayer({ ...active.player, stats: { ...active.player.stats, ...template.stats } } as any)
-    }
-    setPhase('PLAYING')
+    if (!selected || loading || !player) return
+    const trope = tropes.find(t => t.id === selected)
+    if (!trope) return
+    setPhase("PLAYING");
     setLocalLoading(true)
     setLoading(true)
-
-    addMessage({ id: 'sys-' + Date.now(), role: 'system', content: '已选择出身: ' + template.name, timestamp: Date.now() })
-
+    addMessage({ id: 'sys-1779763776648', role: 'system', content: '选择了开局流派: ' + trope.name, timestamp: Date.now() })
     try {
-      const res = await fetch('/api/game/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ llmConfig: getLLMConfig(), 
-          input: '\u73a9\u5bb6\u9009\u62e9\u4e86\u003a\u0020' + template.name + ' - ' + template.description + '\n\n\u80cc\u666f\u003a\u0020' + template.description,
-          playerId: active.player?.id || String(Date.now()),
-          mode: 'prepare'
+      const res = await fetch("/api/game/action", {
+        method: "POST" ,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          llmConfig: getLLMConfig(),
+          input: '\n[STREAM_START]\n[GENRE]' + trope.id + '\n[TITLE]' + trope.name + '\n[HINT]' + trope.openingHint + '\n[STREAM_END]\n' ,
+          playerName: player?.name || '无名' ,
+          playerId: player?.id || String(Date.now()),
+          mode: 'prepare' 
         })
       })
-
       if (!res.ok) {
         const errBody = await res.text()
-        let errMsg = '请求失败 (' + res.status + ')'
+        let errMsg = '请求失败 (' + res.status + ')' 
         try { errMsg = JSON.parse(errBody).error || errMsg } catch {}
-        addMessage({ id: 'err-' + Date.now(), role: 'assistant', content: errMsg, timestamp: Date.now() })
+        addMessage({ id: 'err-1779763776648', role: 'assistant', content: errMsg, timestamp: Date.now() })
         return
       }
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       if (!reader) return
-
-      let buffer = ''
+      let buffer = '' 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         buffer += decoder.decode(value, { stream: true })
-
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        let currentEventName = ''
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEventName = line.slice(7)
-          } else if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (currentEventName === 'reply') {
-              const parsed = JSON.parse(data)
-              if (parsed.reply) {
-                addMessage({ id: 'ai-' + Date.now(), role: 'assistant', content: parsed.reply, timestamp: Date.now() })
-              }
-              if (parsed.player) setPlayer(parsed.player)
-            } else if (currentEventName === 'step') {
-              setCurrentEvent(JSON.parse(data).label)
-            } else if (currentEventName === 'error') {
-              addMessage({ id: 'err-' + Date.now(), role: 'assistant', content: JSON.parse(data).message, timestamp: Date.now() })
-            }
+        const parts = buffer.split(String.fromCharCode(10));
+        buffer = parts.pop() || '' 
+        let evt = '' 
+        for (const line of parts) {
+          if (line.startsWith('event: ')) evt = line.slice(7)
+          else if (line.startsWith('data: ')) {
+            const d = line.slice(6)
+            if (evt === 'reply') {
+              const p = JSON.parse(d)
+              if (p.reply) addMessage({ id: 'ai-1779763776648', role: 'assistant', content: p.reply, timestamp: Date.now() })
+              if (p.player) setPlayer(p.player)
+            } else if (evt === 'step') setCurrentEvent(JSON.parse(d).label)
+            else if (evt === 'journal') {var je=JSON.parse(d);useGameStore.getState().addJournal({id:Date.now().toString(),title:je.title,content:je.content,entry_type:je.entry_type||"general",timestamp:je.timestamp||Date.now()})}else if (evt === 'error') addMessage({ id: 'err-1779763776648', role: 'assistant', content: JSON.parse(d).message, timestamp: Date.now() })
           }
         }
       }
     } catch (err) {
-      console.error('Stream error:', err)
-      addMessage({ id: 'err-' + Date.now(), role: 'assistant', content: '[Connection Error] ' + (err instanceof Error ? err.message : String(err)), timestamp: Date.now() })
+      console.error('Stream error:' , err)
+      addMessage({ id: 'err-1779763776648', role: 'assistant', content: '[Connection Error] ' + (err instanceof Error ? err.message : String(err)), timestamp: Date.now() })
     } finally {
       setLocalLoading(false)
       setLoading(false)
@@ -114,31 +108,27 @@ export function SelectScreen() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-zinc-950 to-zinc-900 p-4">
-      <div className="w-full max-w-4xl space-y-8">
+    <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-zinc-950 to-zinc-900 p-4 overflow-auto">
+      <div className="w-full max-w-5xl space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-zinc-200 font-chinese tracking-wider">天 命 抉 择</h1>
-          <p className="text-zinc-400">选择你心仪的出身与资质，踏上修仙之路</p>
+          <p className="text-zinc-400">选择你的开局流派，不同流派将决定你修仙之路的起点与命运</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {templates.map((template) => (
-            <div key={template.id} onClick={() => !loading && setSelected(template.id)} className={getCardClass(template.id)}>
-              <h3 className="text-xl font-bold text-zinc-200 mb-2 font-chinese">{template.name}</h3>
-              <p className="text-zinc-400 text-sm mb-4 h-12">{template.description}</p>
-              <div className="text-xs text-zinc-500 space-y-1">
-                <div>灵根: <span className="text-emerald-400">{template.stats.spiritual_root}</span></div>
-                <div>阵营: <span className="text-amber-400">{template.stats.alignment}</span></div>
-                <div>宗门: <span className="text-blue-400">{template.stats.sect}</span></div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {tropes.map((trope) => (
+            <div key={trope.id} onClick={() => !loading && setSelected(trope.id)} className={getCardClass(trope.id)}>
+              <div className="text-2xl mb-2">{trope.icon}</div>
+              <h3 className="text-sm font-bold text-zinc-200 mb-1 font-chinese">{trope.name}</h3>
+              <p className="text-zinc-500 text-xs leading-relaxed">{trope.desc}</p>
             </div>
           ))}
         </div>
         <div className="flex justify-center">
-          <Button onClick={handleSelect} disabled={!selected || loading} className="px-8 py-6 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-lg">
+          <button onClick={handleSelect} disabled={!selected || loading} className="px-8 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />天道推演中...</> : '确认选择'}
-          </Button>
+          </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

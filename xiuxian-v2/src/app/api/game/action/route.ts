@@ -8,7 +8,7 @@ import { HumanMessage } from "@langchain/core/messages";
 const gameGraph = buildGameGraph();
 
 export async function POST(req: Request) {
-  const { input, playerId, mode, llmConfig } = await req.json();
+  const { input, playerId, mode, llmConfig, playerName } = await req.json();
 
   if (!playerId)
     return new Response(JSON.stringify({ error: "Missing playerId" }), {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       data: {
         id: playerId,
         status: "ALIVE",
-        name: "wu",
+        name: playerName || "wu",
         gender: "m",
         stats: {} as Prisma.InputJsonValue,
         inventory: [] as Prisma.InputJsonValue,
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         send("step", JSON.stringify({ label: "Loading" }));
         const isPrep = mode === "prepare";
         const userInput = isPrep
-          ? "Start. " + JSON.stringify(player.stats, null, 2)
+          ? input + "\n\nPlayer Stats: " + JSON.stringify(player.stats)
           : input;
         const init = {
           messages: [new HumanMessage(userInput)],
@@ -76,6 +76,9 @@ export async function POST(req: Request) {
         });
         const up = await prisma.player.findUnique({ where: { id: playerId } });
         send("step", JSON.stringify({ label: "Done" }));
+        if(result.deltas&&result.deltas.codex){send("codex",JSON.stringify(result.deltas.codex))}
+        if(result.deltas&&result.deltas.journal){send("journal",JSON.stringify(result.deltas.journal))}
+
         send(
           "reply",
           JSON.stringify({

@@ -1,4 +1,4 @@
-import { GameStateAnnotation } from './graph'
+﻿import { GameStateAnnotation } from './graph'
 import { searchVectors } from '@/lib/vector-store'
 import { directorPrompt } from './prompts'
 import { gameTools, setConversationId, findToolByName } from './tools'
@@ -138,7 +138,7 @@ if(a.mp_change){newStats.mp.current=Math.max(0,Math.min(newStats.mp.max,newStats
 if(a.mp_max_change){newStats.mp.max+=a.mp_max_change}
 if(a.spirit_change){newStats.spirit.value+=a.spirit_change}
 if(a.age_change){newStats.age.current+=a.age_change}
-if(a.combat_power_change){newStats.combat_power+=a.combat_power_change}
+
 if(a.reputation_change){newStats.reputation+=a.reputation_change}
 if(a.state_of_mind_change){newStats.state_of_mind=(newStats.state_of_mind||50)+a.state_of_mind_change}
 if(a.fortune_change){newStats.fortune=(newStats.fortune||10)+a.fortune_change}
@@ -213,6 +213,17 @@ if(name==='Check_Breakthrough'){
 todolist.push('[DONE] Check_Breakthrough: '+args.result)
 if(args.result==='SUCCESS'&&args.new_realm){newStats.realm=args.new_realm}
 deltas.breakthrough=args
+}
+
+// === Write_Codex ===
+if(name==='Write_Codex'){
+todolist.push('[DONE] Write_Codex: '+args.name)
+deltas.codex={name:args.name,entry_type:args.entry_type,description:args.description,metadata:args.metadata||{},timestamp:Date.now()}
+}
+// === Write_Journal ===
+if(name==='Write_Journal'){
+todolist.push('[DONE] Write_Journal: '+args.title)
+deltas.journal={title:args.title,content:args.content,entry_type:args.entry_type||'general',timestamp:Date.now()}
 }
 
 // === Skip ===

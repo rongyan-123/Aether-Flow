@@ -1,4 +1,4 @@
-// game tools
+﻿// game tools
 let _cid='';
 export function setConversationId(id:string){_cid=id}
 
@@ -180,13 +180,33 @@ schema:z.object({result:z.enum(['SUCCESS','FAIL']),new_realm:z.string().optional
 func:async({result,new_realm})=>JSON.stringify({result,new_realm})
 })
 
+
+export const writeCodexTool=new DynamicStructuredTool({
+name:'Write_Codex',
+description:'Add an entry to the codex. Call when player encounters a new NPC, location, item, or sect.',
+schema:z.object({name:z.string(),entry_type:z.enum(['npc','location','item','sect']),description:z.string(),metadata:z.record(z.string(),z.any()).optional()}),
+func:async(args)=>{
+if(_cid){try{await storeVector(_cid,'Codex: '+args.name+' ['+args.entry_type+']\n'+args.description,{type:'codex',name:args.name,entry_type:args.entry_type})}catch(e){console.error(e)}}
+return JSON.stringify({success:true,name:args.name,type:args.entry_type})
+},
+})
 // ========== Export ==========
+export const writeJournalTool=new DynamicStructuredTool({
+name:'Write_Journal',
+description:'Write a journal entry summarizing story events. Call when a story begins, a major twist occurs, or a story arc ends. Do NOT call every turn.',
+schema:z.object({title:z.string(),content:z.string(),entry_type:z.enum(['story_start','major_twist','story_end','general']).optional()}),
+func:async({title,content,entry_type})=>{
+if(_cid){try{await storeVector(_cid,'Journal: '+title+'\n'+content,{type:'journal',title:title,entry_type:entry_type||'general'})}catch(e){console.error(e)}}
+return JSON.stringify({success:true,title:title})
+},
+})
+
 export const gameTools=[
 generateItemTool,generateNpcTool,generateLocationTool,generateSectTool,
 backpackAddItemsTool,backpackReduceItemsTool,consumeItemTool,
 modifyStatsTool,modifyTechniquesTool,modifyEquipmentTool,
 modifyTraitsTool,modifyMentalTool,updateRelationshipTool,
-skipTool,changeLocationTool,breakthroughTool,
+skipTool,changeLocationTool,breakthroughTool,writeJournalTool,writeCodexTool,
 ]
 
 export function findToolByName(name:string):DynamicStructuredTool|undefined{

@@ -1,4 +1,4 @@
-export type GradeTier = '天' | '地' | '玄' | '黄'
+﻿export type GradeTier = '天' | '地' | '玄' | '黄'
 export type GradeLevel = '上' | '中' | '下'
 export type ItemGrade = `${GradeTier}阶${GradeLevel}品` | '无'
 export type IntentType = 'NONE' | 'REWARD' | 'PENALTY' | 'COMBAT'
@@ -23,7 +23,7 @@ export interface ICharacterStats {
   alignment: '正道' | '魔道' | '中立'
   sect: string
   spiritual_root: string
-  combat_power: number
+
   mental_state: string
   reputation: number
   emotion?: string
@@ -64,5 +64,23 @@ export interface IChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   thinking?: string
+  timestamp: number
+}
+
+
+export interface JournalEntry {
+  id: string
+  title: string
+  content: string
+  entry_type: string
+  timestamp: number
+}
+
+export interface CodexEntry {
+  id: string
+  name: string
+  entry_type: string
+  description: string
+  metadata: Record<string, any>
   timestamp: number
 }

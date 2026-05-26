@@ -93,6 +93,7 @@ export function ChatPanel() {
         body: JSON.stringify({
           input: currentInput,
           playerId: player?.id || String(Date.now()),
+          playerName: player?.name || '无名',
           llmConfig: getLLMConfig(),
         }),
       });
@@ -141,6 +142,12 @@ export function ChatPanel() {
                 });
               if (parsed.player)
                 useGameStore.getState().setPlayer(parsed.player);
+            } else if (currentEventName === "codex") {
+              var ce = JSON.parse(data);
+              useGameStore.getState().addCodex({ id: "c-" + Date.now(), name: ce.name, entry_type: ce.entry_type || "general", description: ce.description || "", metadata: ce.metadata || {}, timestamp: ce.timestamp || Date.now() });
+            } else if (currentEventName === "journal") {
+              var je = JSON.parse(data);
+              useGameStore.getState().addJournal({ id: "j-" + Date.now(), title: je.title, content: je.content, entry_type: je.entry_type || "general", timestamp: je.timestamp || Date.now() });
             } else if (currentEventName === "step") {
               setCurrentEvent(JSON.parse(data).label);
             } else if (currentEventName === "error") {

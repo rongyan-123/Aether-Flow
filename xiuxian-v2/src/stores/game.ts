@@ -1,15 +1,17 @@
-"use client";
+﻿"use client";
 
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
-import { IPlayer, IChatMessage } from "@/types"
+import { IPlayer, IChatMessage, JournalEntry, CodexEntry } from "@/types"
 
 export interface GameState {
   // 单对话：只有一场修仙旅程
   player: IPlayer | null
   chatHistory: IChatMessage[]
+  journal: JournalEntry[]
+  codex: CodexEntry[]
   phase: "INIT" | "SELECT" | "PLAYING" | "DEAD"
-  currentView: "chat" | "backpack" | "stats" | "settings"
+  currentView: "chat" | "backpack" | "stats" | "settings" | "journal"
   isLoading: boolean
   currentEvent: string
 
@@ -18,6 +20,8 @@ export interface GameState {
   updateStats: (stats: Partial<IPlayer["stats"]>) => void
   updateInventory: (inventory: IPlayer["inventory"]) => void
   addMessage: (msg: IChatMessage) => void
+  addJournal: (entry: JournalEntry) => void
+  addCodex: (entry: CodexEntry) => void
   clearHistory: () => void
   setCurrentView: (v: GameState["currentView"]) => void
   setLoading: (v: boolean) => void
@@ -30,6 +34,8 @@ export const useGameStore = create<GameState>()(
     (set) => ({
       player: null,
       chatHistory: [],
+      journal: [],
+      codex: [],
       phase: "INIT",
       currentView: "chat",
       isLoading: false,
@@ -43,6 +49,10 @@ export const useGameStore = create<GameState>()(
       updateInventory: (inventory) => set((s) => ({
         player: s.player ? { ...s.player, inventory } : null,
       })),
+      addCodex: (entry) => set((s) => ({ codex: [...s.codex, entry] })),
+      addJournal: (entry) => set((s) => ({
+        journal: [...s.journal, entry],
+      })),
       addMessage: (msg) => set((s) => ({
         chatHistory: [...s.chatHistory, msg],
       })),
@@ -50,12 +60,13 @@ export const useGameStore = create<GameState>()(
       setCurrentView: (currentView) => set({ currentView }),
       setLoading: (isLoading) => set({ isLoading }),
       setCurrentEvent: (currentEvent) => set({ currentEvent }),
-      resetGame: () => set({ player: null, chatHistory: [], phase: "INIT", currentView: "chat" }),
+      resetGame: () => set({ player: null, chatHistory: [],
+      journal: [], codex: [], phase: "INIT", currentView: "chat" }),
     }),
     {
       name: "xiuxian-game",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ player: s.player, chatHistory: s.chatHistory, phase: s.phase }),
+      partialize: (s) => ({ player: s.player, chatHistory: s.chatHistory, phase: s.phase, journal: s.journal }),
     }
   )
 )

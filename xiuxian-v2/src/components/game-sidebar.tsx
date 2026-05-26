@@ -3,13 +3,15 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Menu, RotateCcw, MessageCircle, Package, User, Settings } from 'lucide-react'
+import { Menu, RotateCcw, MessageCircle, Package, User, Settings, BookOpen, ScrollText } from 'lucide-react'
 import { useGameStore } from '@/stores/game'
 
 const navItems = [
   { id: 'chat', label: '对话', icon: MessageCircle, requiresPlayer: false },
   { id: 'backpack', label: '背包', icon: Package, requiresPlayer: true },
   { id: 'stats', label: '属性', icon: User, requiresPlayer: true },
+  { id: 'journal', label: '日志', icon: BookOpen, requiresPlayer: true },
+  { id: 'codex', label: '图鉴', icon: ScrollText, requiresPlayer: true },
   { id: 'settings', label: '设置', icon: Settings, requiresPlayer: false },
 ]
 

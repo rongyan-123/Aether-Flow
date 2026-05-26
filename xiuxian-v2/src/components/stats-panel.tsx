@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useGameStore } from '@/stores/game'
@@ -70,7 +70,7 @@ export function StatsDetailPanel() {
         <div className="space-y-2">
           <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">战斗</h4>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800"><Swords className="h-4 w-4 text-red-400" /><div><div className="text-[10px] text-zinc-500">战力</div><div className="text-sm font-bold text-zinc-200">{s.combat_power || 0}</div></div></div>
+            
             <div className="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800"><Wind className="h-4 w-4 text-purple-400" /><div><div className="text-[10px] text-zinc-500">神识</div><div className="text-sm font-bold text-zinc-200">{spirit.value}</div></div></div>
           </div>
         </div>

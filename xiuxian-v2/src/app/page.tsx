@@ -8,6 +8,8 @@ import { SelectScreen } from "@/components/select-screen"
 import { SettingsPanel } from "@/components/settings-panel"
 import { BackpackPanel } from "@/components/backpack-panel"
 import { StatsDetailPanel } from "@/components/stats-panel"
+import { JournalPanel } from "@/components/journal-panel"
+import { CodexPanel } from "@/components/codex-panel"
 import { useGameStore } from "@/stores/game"
 import { useState, useEffect } from "react"
 
@@ -21,7 +23,8 @@ export default function Home() {
     <main className="flex h-screen overflow-hidden bg-zinc-950">      <GameSidebar />
       <div className="flex-1 flex-col relative overflow-hidden">        {currentView === "settings" && <SettingsPanel />}
         {currentView === "backpack" && <BackpackPanel />}
-        {currentView !== "settings" && currentView !== "backpack" && phase === "INIT" && <InitScreen />}
+        {currentView === "journal" && <JournalPanel />}
+        {currentView !== "settings" && currentView !== "backpack" && currentView !== "journal" && phase === "INIT" && <InitScreen />}
         {phase === "SELECT" && <SelectScreen />}
         {phase === "PLAYING" && currentView === "chat" && <ChatPanel />}
         {phase === "PLAYING" && currentView === "stats" && <StatsDetailPanel />}

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -31,7 +31,7 @@ export function InitScreen() {
         alignment: '中立',
         sect: '散修',
         spiritual_root: '五行杂灵根',
-        combat_power: 10,
+        
         mental_state: '心如止水',
         reputation: 0
       },

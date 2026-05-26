@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useGameStore } from '@/stores/game'
@@ -21,7 +21,7 @@ export function StatusPanel() {
   const mp = stats.mp || { current: 0, max: 50 }
   const age = stats.age || { current: 16, max: 100 }
   const spirit = stats.spirit || { value: 0, desc: 'unknown' }
-  const combat_power = stats.combat_power || 0
+
   const hpPercent = hp.max > 0 ? (hp.current / hp.max) * 100 : 0
   const mpPercent = mp.max > 0 ? (mp.current / mp.max) * 100 : 0
   const agePercent = age.max > 0 ? (age.current / age.max) * 100 : 0
@@ -74,7 +74,7 @@ export function StatusPanel() {
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">属性</h4>
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800"><Swords className="h-4 w-4 text-red-400" /><div><div className="text-[10px] text-zinc-500">战力</div><div className="text-sm font-bold text-zinc-200">{combat_power}</div></div></div>
+              
               <div className="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800"><Droplets className="h-4 w-4 text-purple-400" /><div><div className="text-[10px] text-zinc-500">神识</div><div className="text-sm font-bold text-zinc-200">{spirit.value}</div></div></div>
             </div>
           </div>
