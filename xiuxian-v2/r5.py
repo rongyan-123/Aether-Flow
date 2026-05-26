@@ -1,0 +1,1 @@
+import os; p="src/lib/game/nodes.ts"; c=open(p,encoding="utf-8").read(); c=c.replace("\n\n  } catch (err) {","\n  } catch (err) {"); open(p,"w",encoding="utf-8").write(c); print("cleaned")

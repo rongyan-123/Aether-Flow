@@ -1,32 +1,32 @@
-﻿'use client'
+"use client";
 
-import { GameSidebar } from '@/components/game-sidebar'
-import { ChatPanel } from '@/components/chat-panel'
-import { StatusPanel } from '@/components/status-panel'
-import { InitScreen } from '@/components/init-screen'
-import { SelectScreen } from '@/components/select-screen'
-import { useGameStore } from '@/stores/game'
+import { GameSidebar } from "@/components/game-sidebar"
+import { ChatPanel } from "@/components/chat-panel"
+import { StatusPanel } from "@/components/status-panel"
+import { InitScreen } from "@/components/init-screen"
+import { SelectScreen } from "@/components/select-screen"
+import { SettingsPanel } from "@/components/settings-panel"
+import { BackpackPanel } from "@/components/backpack-panel"
+import { StatsDetailPanel } from "@/components/stats-panel"
+import { useGameStore } from "@/stores/game"
+import { useState, useEffect } from "react"
 
 export default function Home() {
-  const { phase, currentView } = useGameStore()
+  const [mounted, setMounted] = useState(false)
+  const { currentView, phase } = useGameStore()
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return null
 
   return (
-    <main className="flex h-screen overflow-hidden bg-zinc-950">
-      {/* 左侧面板：导航与菜单 */}
-      <GameSidebar />
-      
-      {/* 中间主区域 */}
-      <div className="flex-1 flex flex-col relative overflow-hidden">
-        {phase === 'INIT' && <InitScreen />}
-        {phase === 'SELECT' && <SelectScreen />}
-        {phase === 'PLAYING' && currentView === 'chat' && <ChatPanel />}
-        {phase === 'PLAYING' && currentView === 'backpack' && <div className="flex items-center justify-center h-full text-zinc-400 font-chinese">???????...</div>}
-        {phase === 'PLAYING' && currentView === 'stats' && <div className="flex items-center justify-center h-full text-zinc-400 font-chinese">???????...</div>}
-        {phase === 'DEAD' && <div className="flex items-center justify-center h-full text-red-500 text-2xl font-chinese">寿元已尽，道友陨落</div>}
-      </div>
-      
-      {/* 右侧面板：属性与背包 */}
-      {phase === 'PLAYING' && <StatusPanel />}
+    <main className="flex h-screen overflow-hidden bg-zinc-950">      <GameSidebar />
+      <div className="flex-1 flex-col relative overflow-hidden">        {currentView === "settings" && <SettingsPanel />}
+        {currentView === "backpack" && <BackpackPanel />}
+        {currentView !== "settings" && currentView !== "backpack" && phase === "INIT" && <InitScreen />}
+        {phase === "SELECT" && <SelectScreen />}
+        {phase === "PLAYING" && currentView === "chat" && <ChatPanel />}
+        {phase === "PLAYING" && currentView === "stats" && <StatsDetailPanel />}
+        {phase === "DEAD" && <div className="flex items-center justify-center h-full text-red-500 text-2xl font-chinese">小元已尽</div>}
+      </div>      {phase === "PLAYING" && <StatusPanel />}
     </main>
   )
 }

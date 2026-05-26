@@ -1,110 +1,194 @@
-﻿import { DynamicStructuredTool } from "@langchain/core/tools";
-import { z } from "zod";
-import { IInventoryItem } from "@/types";
+// game tools
+let _cid='';
+export function setConversationId(id:string){_cid=id}
 
-// 物品属性 Schema
-const ItemSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().describe("物品名称"),
-  type: z.string().describe("物品类型：丹药/法宝/材料/功法"),
-  grade: z.string().describe("品质：如 黄阶下品"),
-  description: z.string().describe("物品描述"),
-  count: z.number().describe("数量"),
-  value: z.number().describe("价值"),
-});
+import{DynamicStructuredTool}from'@langchain/core/tools'
+import{z}from'zod'
+import{storeVector}from'@/lib/vector-store'
 
-// 1. 背包添加物品工具
-export const backpackAddItemsTool = new DynamicStructuredTool({
-  name: "Backpack_additems",
-  description: "向玩家背包中添加一个或多个物品。例如获得战利品、任务奖励。",
-  schema: z.object({
-    items: z.array(ItemSchema).describe("要添加的物品列表")
-  }),
-  func: async ({ items }) => {
-    // 实际逻辑由 RuleEngine 处理，这里仅做透传标记
-    // 但为了调试，我们可以打印日志
-    console.log("[Tool Call] Adding items:", items.map(i => i.name));
-    return JSON.stringify({ success: true, added: items });
-  },
-});
+const ItemGradeSchema=z.enum(['黄阶下品','黄阶中品','黄阶上品','玄阶下品','玄阶中品','玄阶上品','地阶下品','地阶中品','地阶上品','天阶下品','天阶中品','天阶上品','无'])
+const ItemTypeSchema=z.enum(['丹药','法宝','材料','功法','杂物','特殊物品'])
+const AlignmentSchema=z.enum(['正道','魔道','中立'])
+const EmotionSchema=z.enum(['平静','愤怒','狂喜','悲恸','恐惧','仇恨','好奇','警惕','绝望','冷漠','得意','紧张'])
 
-// 2. 背包减少物品工具
-export const backpackReduceItemsTool = new DynamicStructuredTool({
-  name: "Backpack_reduceitems",
-  description: "从玩家背包中消耗/移除物品。例如使用丹药、损坏法宝。",
-  schema: z.object({
-    items: z.array(z.object({
-      name: z.string().describe("物品名称"),
-      count: z.number().describe("消耗数量")
-    })).describe("要消耗的物品列表")
-  }),
-  func: async ({ items }) => {
-    console.log("[Tool Call] Reducing items:", items.map(i => i.name));
-    return JSON.stringify({ success: true, reduced: items });
-  },
-});
+// ========== Category 1: World Gen (vector DB only) ==========
+export const generateItemTool=new DynamicStructuredTool({
+name:'Generate_Item',
+description:'Generate item metadata and store in world knowledge base. Does NOT add to backpack. To give items, also call Backpack_additems.',
+schema:z.object({items:z.array(z.object({
+name:z.string(),type:ItemTypeSchema,grade:ItemGradeSchema,
+description:z.string(),count:z.number(),value:z.number(),
+effects:z.string().optional(),
+}))}),
+func:async({items})=>{
+for(const item of items){if(_cid){try{await storeVector(_cid,'Item: '+item.name+'\nType: '+item.type+'\nGrade: '+item.grade+'\nDesc: '+item.description,{type:'item',name:item.name,grade:item.grade})}catch(e){console.error(e)}}}
+return JSON.stringify({success:true,added:items.map(i=>i.name+' x'+i.count)})
+},
+})
 
-// 3. 状态变动工具 (伤害/治疗/经验/修为)
-export const modifyStatsTool = new DynamicStructuredTool({
-  name: "Modify_PlayerStats",
-  description: "修改玩家数值状态。包括气血(hp)、灵力(mp)、寿元(age)、修为(cultivation)等。",
-  schema: z.object({
-    hp_change: z.number().optional().describe("气血变动，负数为扣血，正数为回血"),
-    mp_change: z.number().optional().describe("灵力变动"),
-    age_change: z.number().optional().describe("寿元变动 (通常是负数，消耗寿元)"),
-    exp_gain: z.number().optional().describe("修为/经验增加"),
-    damage_taken: z.number().optional().describe("受到的物理/法术伤害")
-  }),
-  func: async (args) => {
-    console.log("[Tool Call] Modifying stats:", args);
-    return JSON.stringify({ success: true, deltas: args });
-  },
-});
+export const generateNpcTool=new DynamicStructuredTool({
+name:'Generate_NPC',
+description:'Generate NPC character and store in world knowledge base.',
+schema:z.object({npcs:z.array(z.object({
+name:z.string(),title:z.string().optional(),realm:z.string(),
+alignment:AlignmentSchema,sect:z.string(),personality:z.string(),
+relationship:z.number(),description:z.string(),
+}))}),
+func:async({npcs})=>{
+for(const npc of npcs){if(_cid){try{await storeVector(_cid,'NPC: '+npc.name+'\nRealm: '+npc.realm+'\nDesc: '+npc.description,{type:'npc',name:npc.name})}catch(e){console.error(e)}}}
+return JSON.stringify({success:true,created:npcs.map(n=>n.name)})
+},
+})
 
-// 4. 跳过/无事发生工具
-export const skipTool = new DynamicStructuredTool({
-  name: "Skip",
-  description: "当没有发生特殊事件、不需要修改数值或背包时调用。",
-  schema: z.object({
-    reason: z.string().describe("原因")
-  }),
-  func: async ({ reason }) => {
-    return JSON.stringify({ action: "skip", reason });
-  },
-});
+export const generateLocationTool=new DynamicStructuredTool({
+name:'Generate_Location',
+description:'Generate location and store in world knowledge base.',
+schema:z.object({locations:z.array(z.object({
+name:z.string(),type:z.string(),danger_level:z.string(),
+description:z.string(),resources:z.string().optional(),creatures:z.string().optional(),
+}))}),
+func:async({locations})=>{
+for(const loc of locations){if(_cid){try{await storeVector(_cid,'Location: '+loc.name+'\nDesc: '+loc.description,{type:'location',name:loc.name})}catch(e){console.error(e)}}}
+return JSON.stringify({success:true,created:locations.map(l=>l.name)})
+},
+})
 
-// 5. 修改位置工具
-export const changeLocationTool = new DynamicStructuredTool({
-  name: "Current_Location",
-  description: "当玩家移动到新地点时调用。",
-  schema: z.object({
-    location: z.string().describe("新地点名称")
-  }),
-  func: async ({ location }) => {
-    console.log("[Tool Call] Changing location to:", location);
-    return JSON.stringify({ success: true, new_location: location });
-  },
-});
+export const generateSectTool=new DynamicStructuredTool({
+name:'Generate_Sect',
+description:'Generate sect and store in world knowledge base.',
+schema:z.object({sects:z.array(z.object({
+name:z.string(),alignment:AlignmentSchema,power_level:z.string(),
+master:z.string(),master_realm:z.string(),description:z.string(),specialties:z.string().optional(),
+}))}),
+func:async({sects})=>{
+for(const sect of sects){if(_cid){try{await storeVector(_cid,'Sect: '+sect.name+'\nAlignment: '+sect.alignment+'\nDesc: '+sect.description,{type:'sect',name:sect.name})}catch(e){console.error(e)}}}
+return JSON.stringify({success:true,created:sects.map(s=>s.name)})
+},
+})
 
-// 6. 突破境界检测工具
-export const breakthroughTool = new DynamicStructuredTool({
-  name: "Check_Breakthrough",
-  description: "检测玩家是否满足突破条件（修为满且心境稳），如果满足则触发突破。",
-  schema: z.object({
-    result: z.enum(["SUCCESS", "FAIL"]).describe("突破结果"),
-    new_realm: z.string().optional().describe("突破后的新境界")
-  }),
-  func: async ({ result, new_realm }) => {
-    return JSON.stringify({ result, new_realm });
-  },
-});
+// ========== Category 2: Backpack Ops ==========
 
-// 导出所有工具数组
-export const gameTools = [
-  backpackAddItemsTool,
-  backpackReduceItemsTool,
-  modifyStatsTool,
-  skipTool,
-  changeLocationTool,
-  breakthroughTool
-];
+export const backpackAddItemsTool=new DynamicStructuredTool({
+name:'Backpack_additems',
+description:'Add items to player backpack. MUST be called when player obtains items.',
+schema:z.object({items:z.array(z.object({
+name:z.string(),type:z.string(),grade:z.string(),
+description:z.string(),count:z.number(),value:z.number(),
+}))}),
+func:async({items})=>JSON.stringify({success:true,action:'add',items:items.map(i=>i.name+' x'+i.count)})
+})
+
+export const backpackReduceItemsTool=new DynamicStructuredTool({
+name:'Backpack_reduceitems',
+description:'Remove items from player backpack.',
+schema:z.object({items:z.array(z.object({
+name:z.string(),count:z.number(),
+}))}),
+func:async({items})=>JSON.stringify({success:true,action:'reduce',items:items.map(i=>i.name+' x'+i.count)})
+})
+
+export const consumeItemTool=new DynamicStructuredTool({
+name:'Consume_Item',
+description:'Consume/use an item. Same as Backpack_reduceitems.',
+schema:z.object({items:z.array(z.object({name:z.string(),count:z.number()}))}),
+func:async({items})=>JSON.stringify({success:true})
+})
+
+// ========== Category 3: Player State ==========
+
+export const modifyStatsTool=new DynamicStructuredTool({
+name:'Modify_Stats',
+description:'Modify player core attributes. Positive=gain, negative=loss.',
+schema:z.object({
+hp_change:z.number().optional(),hp_max_change:z.number().optional(),
+mp_change:z.number().optional(),mp_max_change:z.number().optional(),
+spirit_change:z.number().optional(),age_change:z.number().optional(),
+combat_power_change:z.number().optional(),reputation_change:z.number().optional(),
+state_of_mind_change:z.number().optional(),fortune_change:z.number().optional(),
+karma_change:z.number().optional(),
+}),
+func:async(args)=>JSON.stringify({success:true,deltas:args})
+})
+
+export const modifyTechniquesTool=new DynamicStructuredTool({
+name:'Modify_Techniques',
+description:'Modify player technique/cultivation skills.',
+schema:z.object({
+main:z.string().optional(),add_combat:z.string().optional(),
+remove_combat:z.string().optional(),movement:z.string().optional(),
+add_support:z.string().optional(),remove_support:z.string().optional(),
+}),
+func:async(args)=>JSON.stringify({success:true,...args})
+})
+
+export const modifyEquipmentTool=new DynamicStructuredTool({
+name:'Modify_Equipment',
+description:'Modify player equipment. null=unequip.',
+schema:z.object({
+weapon:z.string().optional(),armor:z.string().optional(),artifact:z.string().optional(),
+}),
+func:async(args)=>JSON.stringify({success:true,...args})
+})
+
+export const modifyTraitsTool=new DynamicStructuredTool({
+name:'Modify_Traits',
+description:'Modify player talents and traits.',
+schema:z.object({
+add_talents:z.array(z.string()).optional(),remove_talents:z.array(z.string()).optional(),
+add_traits:z.array(z.string()).optional(),remove_traits:z.array(z.string()).optional(),
+}),
+func:async(args)=>JSON.stringify({success:true,...args})
+})
+
+export const modifyMentalTool=new DynamicStructuredTool({
+name:'Modify_Mental',
+description:'Modify player mental and social state.',
+schema:z.object({
+emotion:EmotionSchema.optional(),mental_state:z.string().optional(),
+reputation_change:z.number().optional(),state_of_mind_change:z.number().optional(),
+alignment:z.enum(['正道','魔道','中立']).optional(),
+sect:z.string().optional(),spiritual_root:z.string().optional(),
+}),
+func:async(args)=>JSON.stringify({success:true,...args})
+})
+
+export const updateRelationshipTool=new DynamicStructuredTool({
+name:'Update_Relationship',
+description:'Update relationship with NPC. Range: -100 to 100.',
+schema:z.object({npc_name:z.string(),change:z.number()}),
+func:async({npc_name,change})=>JSON.stringify({success:true,npc_name,change})
+})
+
+export const skipTool=new DynamicStructuredTool({
+name:'Skip',
+description:'Nothing happened.',
+schema:z.object({reason:z.string()}),
+func:async({reason})=>JSON.stringify({action:'skip',reason})
+})
+
+export const changeLocationTool=new DynamicStructuredTool({
+name:'Change_Location',
+description:'Change player location.',
+schema:z.object({location:z.string()}),
+func:async({location})=>JSON.stringify({success:true,new_location:location})
+})
+
+export const breakthroughTool=new DynamicStructuredTool({
+name:'Check_Breakthrough',
+description:'Check realm breakthrough.',
+schema:z.object({result:z.enum(['SUCCESS','FAIL']),new_realm:z.string().optional(),realm_change:z.string().optional()}),
+func:async({result,new_realm})=>JSON.stringify({result,new_realm})
+})
+
+// ========== Export ==========
+export const gameTools=[
+generateItemTool,generateNpcTool,generateLocationTool,generateSectTool,
+backpackAddItemsTool,backpackReduceItemsTool,consumeItemTool,
+modifyStatsTool,modifyTechniquesTool,modifyEquipmentTool,
+modifyTraitsTool,modifyMentalTool,updateRelationshipTool,
+skipTool,changeLocationTool,breakthroughTool,
+]
+
+export function findToolByName(name:string):DynamicStructuredTool|undefined{
+return gameTools.find(t=>t.name===name)
+}

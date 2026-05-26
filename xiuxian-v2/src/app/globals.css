@@ -190,3 +190,26 @@ body {
   font-family: 'Noto Serif SC', serif;
 }
 
+
+/* 修仙关键词着色 */
+.text-xiuxian-gold { color: #D4AF37; font-weight: 600; }
+.text-xiuxian-jade { color: #10B981; font-weight: 600; }
+.text-xiuxian-crimson { color: #E11D48; font-weight: 600; }
+.text-xiuxian-purple { color: #8B5CF6; font-weight: 600; }
+/* AI回复中的加粗名词自动着色 */
+.prose-xiuxian strong { color: #D4AF37; }
+/* AI回复中引用块样式 */
+.prose-xiuxian blockquote {
+  border-left-color: #D4AF37;
+  background: rgba(212, 175, 55, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  color: #a1a1aa;
+}
+/* AI回复中分隔线样式 */
+.prose-xiuxian hr {
+  border-color: rgba(212, 175, 55, 0.2);
+  margin: 1rem 0;
+}

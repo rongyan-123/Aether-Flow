@@ -1,78 +1,61 @@
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { IPlayer, IChatMessage } from '@/types'
+"use client";
 
-type GamePhase = 'INIT' | 'SELECT' | 'PLAYING' | 'DEAD'
+import { create } from "zustand"
+import { persist, createJSONStorage } from "zustand/middleware"
+import { IPlayer, IChatMessage } from "@/types"
 
-interface GameState {
-  // 状态
-  phase: GamePhase
+export interface GameState {
+  // 单对话：只有一场修仙旅程
   player: IPlayer | null
   chatHistory: IChatMessage[]
+  phase: "INIT" | "SELECT" | "PLAYING" | "DEAD"
+  currentView: "chat" | "backpack" | "stats" | "settings"
   isLoading: boolean
-  currentEvent: string // 当前层事件描述
-  currentView: 'chat' | 'backpack' | 'stats'
-  
-  // 动作
-  setPhase: (phase: GamePhase) => void
+  currentEvent: string
+
+  setPhase: (phase: GameState["phase"]) => void
   setPlayer: (player: IPlayer) => void
-  updateStats: (stats: Partial<IPlayer['stats']>) => void
-  updateInventory: (inventory: IPlayer['inventory']) => void
-  addMessage: (message: IChatMessage) => void
+  updateStats: (stats: Partial<IPlayer["stats"]>) => void
+  updateInventory: (inventory: IPlayer["inventory"]) => void
+  addMessage: (msg: IChatMessage) => void
   clearHistory: () => void
-  setLoading: (loading: boolean) => void
-  setCurrentEvent: (event: string) => void
-  setCurrentView: (view: 'chat' | 'backpack' | 'stats') => void
+  setCurrentView: (v: GameState["currentView"]) => void
+  setLoading: (v: boolean) => void
+  setCurrentEvent: (v: string) => void
+  resetGame: () => void
 }
 
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
-      phase: 'INIT',
       player: null,
       chatHistory: [],
+      phase: "INIT",
+      currentView: "chat",
       isLoading: false,
-      currentEvent: '',
-  currentView: 'chat' as 'chat' | 'backpack' | 'stats',
-      
+      currentEvent: "",
+
       setPhase: (phase) => set({ phase }),
-      
       setPlayer: (player) => set({ player }),
-      
-      updateStats: (stats) => set((state) => ({
-        player: state.player ? {
-          ...state.player,
-          stats: { ...state.player.stats, ...stats }
-        } : null
+      updateStats: (stats) => set((s) => ({
+        player: s.player ? { ...s.player, stats: { ...s.player.stats, ...stats } as IPlayer["stats"] } : null,
       })),
-      
-      updateInventory: (inventory) => set((state) => ({
-        player: state.player ? {
-          ...state.player,
-          inventory
-        } : null
+      updateInventory: (inventory) => set((s) => ({
+        player: s.player ? { ...s.player, inventory } : null,
       })),
-      
-      addMessage: (message) => set((state) => ({
-        chatHistory: [...state.chatHistory, message]
+      addMessage: (msg) => set((s) => ({
+        chatHistory: [...s.chatHistory, msg],
       })),
-      
       clearHistory: () => set({ chatHistory: [] }),
-      
-      setLoading: (loading) => set({ isLoading: loading }),
-      
-      setCurrentEvent: (event) => set({ currentEvent: event }),
-      setCurrentView: (view) => set({ currentView: view })
+      setCurrentView: (currentView) => set({ currentView }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setCurrentEvent: (currentEvent) => set({ currentEvent }),
+      resetGame: () => set({ player: null, chatHistory: [], phase: "INIT", currentView: "chat" }),
     }),
     {
-      name: 'xiuxian-game-storage',
+      name: "xiuxian-game",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        player: state.player,
-        phase: state.phase,
-        chatHistory: state.chatHistory,
-        currentView: state.currentView
-      })
+      partialize: (s) => ({ player: s.player, chatHistory: s.chatHistory, phase: s.phase }),
     }
   )
 )

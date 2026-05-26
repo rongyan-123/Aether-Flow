@@ -1,0 +1,1 @@
+import os; p="src/app/page.tsx"; c=open(p,encoding="utf-8").read(); print("useEffect" in c)
