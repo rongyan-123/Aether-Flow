@@ -15,6 +15,7 @@ export interface GameState {
   isLoading: boolean
   currentEvent: string
   notifications: Record<string, number>
+  pendingInput: string
 
   setPhase: (phase: GameState["phase"]) => void
   setPlayer: (player: IPlayer) => void
@@ -30,6 +31,7 @@ export interface GameState {
   setCurrentEvent: (v: string) => void
   addNotification: (key: string) => void
   clearNotification: (key: string) => void
+  setPendingInput: (input: string) => void
   resetGame: () => void
 }
 
@@ -45,6 +47,7 @@ export const useGameStore = create<GameState>()(
       isLoading: false,
       currentEvent: "",
       notifications: {},
+      pendingInput: "",
 
       setPhase: (phase) => set({ phase }),
       setPlayer: (player) => set((s) => ({ player: player, codex: (player && player.codex) ? player.codex : s.codex })),
@@ -78,8 +81,9 @@ export const useGameStore = create<GameState>()(
       clearNotification: (key) => set((s) => ({
         notifications: { ...s.notifications, [key]: 0 },
       })),
+      setPendingInput: (pendingInput) => set({ pendingInput }),
       resetGame: () => set({ player: null, chatHistory: [],
-      journal: [], codex: [], phase: "INIT", currentView: "chat", notifications: {} }),
+      journal: [], codex: [], phase: "INIT", currentView: "chat", notifications: {}, pendingInput: "" }),
     }),
     {
       name: "xiuxian-game",

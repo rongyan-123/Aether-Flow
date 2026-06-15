@@ -45,6 +45,8 @@ export function ChatPanel() {
     phase,
     addNotification,
   } = useGameStore();
+  const pendingInput = useGameStore((s) => s.pendingInput)
+  const setPendingInput = useGameStore((s) => s.setPendingInput)
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,14 @@ export function ChatPanel() {
       setPoemIndex(Math.floor(Math.random() * LOADING_POEMS.length));
     }
   }, [isLoading]);
+
+  // 从其他面板（如日志）跳转过来时，预填输入框
+  useEffect(() => {
+    if (pendingInput) {
+      setInput(pendingInput)
+      setPendingInput('')
+    }
+  }, [pendingInput, setPendingInput])
 
   // 诗歌轮播：等待AI时每4秒换一句
   useEffect(() => {

@@ -1496,3 +1496,221 @@ test.describe('Edge Cases — 边界情况', () => {
     await expect(page.locator('html')).toHaveClass(/dark/)
   })
 })
+
+// ── 经验库（修仙日志）功能 ──────────────────────────────────────────
+
+test.describe('Journal — 经验库（修仙日志）', () => {
+  async function jumpToJournalWithData(page: Page) {
+    await page.evaluate(() => {
+      localStorage.setItem('xiuxian-game', JSON.stringify({
+        state: {
+          player: {
+            id: 'journal-test',
+            status: 'ALIVE',
+            name: '经验测试者',
+            gender: '男',
+            stats: {
+              hp: { current: 100, max: 100, status_desc: '良好' },
+              mp: { current: 50, max: 50, status_desc: '充沛' },
+              spirit: { value: 100, desc: '饱满' },
+              realm: '练气期一层',
+              age: { current: 16, max: 100 },
+              race: '人族', alignment: '中立', sect: '散修',
+              spiritual_root: '杂灵根', mental_state: '平静', reputation: 10,
+            },
+            inventory: [], relationships: {},
+          },
+          chatHistory: [],
+          journal: [
+            { id: 'j1', title: '成功突破练气期', content: '经过三天三夜的修炼，终于突破了练气期的瓶颈。', entry_type: 'success', timestamp: Date.now() - 3600000 },
+            { id: 'j2', title: '炼丹失败差点炸炉', content: '火候没有掌握好，丹炉差点炸裂。记住：火候要先文后武。', entry_type: 'failure', timestamp: Date.now() - 7200000 },
+            { id: 'j3', title: '坊市遇到的坑', content: '坊市中切勿轻信陌生人兜售的功法，十有八九是骗局。', entry_type: 'pitfall', timestamp: Date.now() - 10800000 },
+          ],
+          codex: [],
+          phase: 'PLAYING',
+          currentView: 'journal',
+          isLoading: false, currentEvent: '', notifications: {},
+        },
+        version: 0,
+      }))
+    })
+    await page.reload()
+    await page.waitForTimeout(300)
+  }
+
+  test.describe('筛选标签', () => {
+    test('4个筛选标签全部渲染且可见', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      for (const label of ['全部', '成功经验', '失败教训', '踩坑点']) {
+        const btn = page.getByRole('button', { name: label })
+        await expect(btn).toBeVisible()
+      }
+    })
+
+    test('默认选中"全部"，有高亮样式', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      const allBtn = page.getByRole('button', { name: '全部' })
+      await expect(allBtn).toHaveClass(/border-amber-500/)
+      await expect(allBtn).toHaveClass(/bg-amber-500\/20/)
+    })
+
+    test('点击"成功经验"切换高亮，且只显示成功类条目', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      await page.getByRole('button', { name: '成功经验' }).click()
+
+      // 高亮切换
+      const successBtn = page.getByRole('button', { name: '成功经验' })
+      await expect(successBtn).toHaveClass(/border-amber-500/)
+
+      // "全部"不再高亮
+      const allBtn = page.getByRole('button', { name: '全部' })
+      await expect(allBtn).not.toHaveClass(/border-amber-500/)
+
+      // 只显示1条
+      await expect(page.getByText('成功突破练气期').filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('炼丹失败差点炸炉').filter({ visible: true }).first()).not.toBeVisible()
+    })
+
+    test('点击"失败教训"只显示失败类条目', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      await page.getByRole('button', { name: '失败教训' }).click()
+      await expect(page.getByText('炼丹失败差点炸炉').filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('成功突破练气期').filter({ visible: true }).first()).not.toBeVisible()
+    })
+
+    test('点击"踩坑点"只显示踩坑类条目', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      await page.getByRole('button', { name: '踩坑点' }).click()
+      await expect(page.getByText('坊市遇到的坑').filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('成功突破练气期').filter({ visible: true }).first()).not.toBeVisible()
+    })
+
+    test('点击"全部"恢复显示所有条目', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      // 先切到别的筛选
+      await page.getByRole('button', { name: '失败教训' }).click()
+      // 切回全部
+      await page.getByRole('button', { name: '全部' }).click()
+
+      await expect(page.getByText('成功突破练气期').filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('炼丹失败差点炸炉').filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('坊市遇到的坑').filter({ visible: true }).first()).toBeVisible()
+    })
+
+    test('筛选后空分类显示空状态提示', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      // 只有一个 success 条目，没有 general 类型
+      await page.evaluate(() => {
+        localStorage.setItem('xiuxian-game', JSON.stringify({
+          state: {
+            player: { id: 'j-empty', status: 'ALIVE', name: '空', gender: '男',
+              stats: { hp: { current: 100, max: 100, status_desc: '好' }, mp: { current: 50, max: 50, status_desc: '好' }, spirit: { value: 100, desc: '好' }, realm: '练气期一层', age: { current: 16, max: 100 }, race: '人族', alignment: '中立', sect: '散修', spiritual_root: '杂灵根', mental_state: '平静', reputation: 0 },
+              inventory: [], relationships: {} },
+            chatHistory: [],
+            journal: [{ id: 'j1', title: '成功', content: '成功经验内容', entry_type: 'success', timestamp: Date.now() }],
+            codex: [],
+            phase: 'PLAYING', currentView: 'journal',
+            isLoading: false, currentEvent: '', notifications: {},
+          },
+          version: 0,
+        }))
+      })
+      await page.reload()
+      await page.waitForTimeout(300)
+
+      await page.getByRole('button', { name: '失败教训' }).click()
+      await expect(page.getByText('该分类下暂无记录').filter({ visible: true }).first()).toBeVisible()
+    })
+  })
+
+  test.describe('聊天按钮', () => {
+    test('每个条目都有"聊这个"按钮', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      const chatBtns = page.getByRole('button', { name: '聊这个' })
+      await expect(chatBtns).toHaveCount(3)
+    })
+
+    test('点击"聊这个"跳转到聊天界面，输入框预填内容', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      await page.getByRole('button', { name: '聊这个' }).first().click()
+
+      // 验证跳转到聊天
+      await expect(page.locator('h2:has-text("天机推演")').filter({ visible: true }).first()).toBeVisible()
+
+      // 验证输入框有内容
+      const input = page.locator('input[placeholder="输入你的行动或对话..."]').filter({ visible: true })
+      await expect(input).toHaveValue('经过三天三夜的修炼，终于突破了练气期的瓶颈。')
+    })
+
+    test('点击"聊这个"后发送按钮可点击（不再是灰色禁用）', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await jumpToJournalWithData(page)
+
+      await page.getByRole('button', { name: '聊这个' }).first().click()
+      await page.waitForTimeout(300)
+
+      // 发送按钮应该是 enabled 的
+      const sendBtn = page.locator('button:has(svg.lucide-send), button').filter({ has: page.locator('.lucide-send') })
+      // 直接用 input 旁边的 button — 查找非 disabled 的发送按钮
+      const input = page.locator('input[placeholder="输入你的行动或对话..."]').filter({ visible: true })
+      // 输入框旁边的按钮不再是 disabled
+      await expect(input).not.toHaveAttribute('disabled')
+    })
+
+    test('点击"聊这个"后按 Enter 可以发送消息（完整流程）', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await freshStart(page)
+      await setFakeLLMConfig(page)
+      await jumpToJournalWithData(page)
+
+      let capturedBody: any = null
+      await page.route('**/api/game/action', (route) => {
+        capturedBody = route.request().postDataJSON()
+        route.fulfill({
+          status: 200,
+          headers: { 'content-type': 'text/event-stream' },
+          body: 'event: reply\ndata: ' + JSON.stringify({ reply: '系统收到你的经验反思。' }) + '\n\nevent: done\ndata: \n',
+        })
+      })
+
+      // 点击聊这个
+      await page.getByRole('button', { name: '聊这个' }).first().click()
+      await page.waitForTimeout(300)
+
+      // 按 Enter 发送
+      const input = page.locator('input[placeholder="输入你的行动或对话..."]').filter({ visible: true })
+      await input.press('Enter')
+
+      // 验证 API 被调用
+      await page.waitForTimeout(500)
+      expect(capturedBody).not.toBeNull()
+      expect(capturedBody.input).toContain('突破了练气期的瓶颈')
+    })
+  })
+})

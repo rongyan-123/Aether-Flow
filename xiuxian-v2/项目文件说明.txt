@@ -199,8 +199,9 @@ codex-panel.tsx ★图鉴面板★
   └─ 按类型分组（人物/地点/物品/宗门），卡片式布局
   └─ 数据来源：store.codex ← setPlayer(player.codex) ← DB
 
-journal-panel.tsx ★日志面板★
-  └─ 故事关键事件记录列表
+journal-panel.tsx ★日志面板（经验库）★
+  └─ 故事关键事件记录列表 + 4 个筛选标签（全部/成功经验/失败教训/踩坑点）
+  └─ 每条日志有"聊这个"按钮，点击跳转聊天并预填内容
 
 init-screen.tsx ★初始界面★
   └─ 输入道号（玩家名）、选择性别 → 调用 setPlayer → 进入 SELECT 阶段
