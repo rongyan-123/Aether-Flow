@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.env*
+dev-server.log
+_tmp
+*.md
+测试龙*
+上次对话记录.txt
+项目文件说明.txt
+codex执行日志.txt
