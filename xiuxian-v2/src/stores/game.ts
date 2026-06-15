@@ -11,21 +11,25 @@ export interface GameState {
   journal: JournalEntry[]
   codex: CodexEntry[]
   phase: "INIT" | "SELECT" | "PLAYING" | "DEAD"
-  currentView: "chat" | "backpack" | "stats" | "settings" | "journal"
+  currentView: "chat" | "backpack" | "stats" | "settings" | "journal" | "codex"
   isLoading: boolean
   currentEvent: string
+  notifications: Record<string, number>
 
   setPhase: (phase: GameState["phase"]) => void
   setPlayer: (player: IPlayer) => void
   updateStats: (stats: Partial<IPlayer["stats"]>) => void
   updateInventory: (inventory: IPlayer["inventory"]) => void
   addMessage: (msg: IChatMessage) => void
+  removeMessage: (id: string) => void
   addJournal: (entry: JournalEntry) => void
   addCodex: (entry: CodexEntry) => void
   clearHistory: () => void
   setCurrentView: (v: GameState["currentView"]) => void
   setLoading: (v: boolean) => void
   setCurrentEvent: (v: string) => void
+  addNotification: (key: string) => void
+  clearNotification: (key: string) => void
   resetGame: () => void
 }
 
@@ -40,9 +44,10 @@ export const useGameStore = create<GameState>()(
       currentView: "chat",
       isLoading: false,
       currentEvent: "",
+      notifications: {},
 
       setPhase: (phase) => set({ phase }),
-      setPlayer: (player) => set({ player }),
+      setPlayer: (player) => set((s) => ({ player: player, codex: (player && player.codex) ? player.codex : s.codex })),
       updateStats: (stats) => set((s) => ({
         player: s.player ? { ...s.player, stats: { ...s.player.stats, ...stats } as IPlayer["stats"] } : null,
       })),
@@ -56,17 +61,30 @@ export const useGameStore = create<GameState>()(
       addMessage: (msg) => set((s) => ({
         chatHistory: [...s.chatHistory, msg],
       })),
+      removeMessage: (id) => set((s) => ({
+        chatHistory: s.chatHistory.filter(m => m.id !== id),
+      })),
       clearHistory: () => set({ chatHistory: [] }),
-      setCurrentView: (currentView) => set({ currentView }),
+      setCurrentView: (currentView) => set((s) => {
+        const notif = { ...s.notifications };
+        if (currentView !== 'chat') notif[currentView] = 0;
+        return { currentView, notifications: notif };
+      }),
       setLoading: (isLoading) => set({ isLoading }),
       setCurrentEvent: (currentEvent) => set({ currentEvent }),
+      addNotification: (key) => set((s) => ({
+        notifications: { ...s.notifications, [key]: (s.notifications[key] || 0) + 1 },
+      })),
+      clearNotification: (key) => set((s) => ({
+        notifications: { ...s.notifications, [key]: 0 },
+      })),
       resetGame: () => set({ player: null, chatHistory: [],
-      journal: [], codex: [], phase: "INIT", currentView: "chat" }),
+      journal: [], codex: [], phase: "INIT", currentView: "chat", notifications: {} }),
     }),
     {
       name: "xiuxian-game",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ player: s.player, chatHistory: s.chatHistory, phase: s.phase, journal: s.journal }),
+      partialize: (s) => ({ player: s.player, chatHistory: s.chatHistory, phase: s.phase, journal: s.journal, codex: s.codex }),
     }
   )
 )

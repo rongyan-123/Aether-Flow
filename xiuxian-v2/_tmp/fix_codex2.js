@@ -1,0 +1,4 @@
+﻿var fs=require("fs");var f="D:/xiuxian/xiuxian/xiuxian-v2/src/app/api/game/action/route.ts";var c=fs.readFileSync(f,"utf8");
+var old="entry_type: v.metadata.entry_type || "+String.fromCharCode(34)+"general"+String.fromCharCode(34)+", description: (v.content || "+String.fromCharCode(34)+String.fromCharCode(34)+").replace(/^Codex: [^\\\\n]*\\\\n/, "+String.fromCharCode(34)+String.fromCharCode(34)+")";
+var rep="entry_type: (v.metadata.type === "+String.fromCharCode(34)+"codex"+String.fromCharCode(34)+" ? (v.metadata.entry_type || "+String.fromCharCode(34)+"general"+String.fromCharCode(34)+") : v.metadata.type) || "+String.fromCharCode(34)+"general"+String.fromCharCode(34)+", description: v.content || "+String.fromCharCode(34)+String.fromCharCode(34);
+c=c.replace(old,rep);fs.writeFileSync(f,c,"utf8");console.log("done",c.length);

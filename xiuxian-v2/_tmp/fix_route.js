@@ -1,0 +1,4 @@
+﻿var fs=require("fs");var f="D:/xiuxian/xiuxian/xiuxian-v2/src/app/api/game/action/route.ts";var c=fs.readFileSync(f,"utf8");
+var old="var allVectors = await listVectors(playerId);\n        var codexTypes = [\"npc\",\"location\",\"item\",\"sect\",\"codex\"];\n        var codexEntries = allVectors.filter(function(v){ var m = v.metadata; return m && codexTypes.indexOf(m.type) >= 0; }).map(function(v,i){ return { id: \"cv-\" + i, name: v.metadata.name || \"\", entry_type: (v.metadata.type === \"codex\" ? (v.metadata.entry_type || \"general\") : v.metadata.type) || \"general\", description: v.content || \"\", metadata: {}, timestamp: Date.now() }; });\n        await prisma.player.update({ where: { id: playerId }, data: { codex: codexEntries } });";
+var rep="// codex is now persisted by ruleEngineNode + dbPersistNode";
+c=c.replace(old,rep);fs.writeFileSync(f,c,"utf8");console.log("done",c.length);

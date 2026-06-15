@@ -10,6 +10,7 @@ export interface IPlayer {
   gender: string
   stats: ICharacterStats
   inventory: IInventoryItem[]
+  codex: CodexEntry[]
   relationships: IRelationships
 }
 
@@ -36,11 +37,7 @@ export interface ICharacterStats {
     movement: string
     support: string[]
   }
-  equipment?: {
-    weapon: string
-    armor: string
-    artifact: string
-  }
+  shield?: { current: number; max: number }
   talents?: string[]
   traits?: string[]
 }
@@ -65,6 +62,8 @@ export interface IChatMessage {
   content: string
   thinking?: string
   timestamp: number
+  error?: boolean
+  userInput?: string
 }
 
 
@@ -83,4 +82,34 @@ export interface CodexEntry {
   description: string
   metadata: Record<string, any>
   timestamp: number
+}
+
+export type SituationType = 'conflict' | 'exploration' | 'social' | 'opportunity' | 'mystery'
+export type SituationStatus = 'brewing' | 'climax' | 'resolution' | 'ended'
+
+export interface Situation {
+  id: string
+  title: string
+  type: SituationType
+  trigger: string
+  npcs: string[]
+  player_goal: string
+  possible_outcomes: string[]
+  actual_outcome?: string
+  linked_foreshadowing: string[]
+  linked_situation: string | null
+  status: SituationStatus
+  startTurn: number
+  endTurn?: number
+  updatedAt: number
+}
+
+export interface Foreshadowing {
+  id: string
+  title: string
+  description: string
+  related_situation: string
+  plantedTurn: number
+  resolvedTurn?: number
+  resolved: boolean
 }

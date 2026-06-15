@@ -6,7 +6,7 @@ const GraphState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
     reducer: (x, y) => x.concat(y),
   }),
-  playerState: Annotation<Record<string, any>>({
+  playerState: Annotation<Record<string, unknown>>({
     reducer: (x, y) => ({ ...x, ...y }),
   }),
   intent: Annotation<string>({
@@ -15,7 +15,7 @@ const GraphState = Annotation.Root({
   ragContext: Annotation<string>({
     reducer: (x, y) => y ?? x,
   }),
-  calculations: Annotation<Record<string, any>>({
+  calculations: Annotation<Record<string, unknown>>({
     reducer: (x, y) => ({ ...x, ...y }),
   }),
 });
@@ -37,10 +37,10 @@ async function plotDirector(state: typeof GraphState.State) {
   // TODO: 调用 LLM (Vercel AI SDK 或 LangChain ChatModel)
   // 输入: messages + ragContext + playerState
   // 输出: AI 回复 + 意图分类 (Intent)
-  
+
   const mockAiReply = "你盘膝而坐，吸纳天地灵气。忽然，一道传音符飞入洞府...";
   const mockIntent = "NONE"; // REWARD, PENALTY, COMBAT
-  
+
   return {
     messages: [new AIMessage(mockAiReply)],
     intent: mockIntent,
@@ -59,7 +59,7 @@ async function ruleEngine(state: typeof GraphState.State) {
   } else if (intent === "REWARD") {
     calculations = { itemGained: "下品灵石", amount: 5 };
   }
-  
+
   return { calculations };
 }
 

@@ -3,7 +3,8 @@
 
 import { useState } from 'react'
 import { useGameStore } from '@/stores/game'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
+import { IChatMessage } from '@/types'
 
 type Trope = {
   id: string
@@ -36,14 +37,34 @@ function getLLMConfig() {
 }
 
 export function SelectScreen() {
-  const { setPhase, setPlayer, addMessage, setLoading, setCurrentEvent, player } = useGameStore()
+  const { setPhase, setPlayer, addMessage, removeMessage, setLoading, setCurrentEvent, player, addNotification } = useGameStore()
   const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLocalLoading] = useState(false)
 
+  const addErrorMessage = (content: string, userInput: string) => {
+    const msgs = useGameStore.getState().chatHistory
+    const lastMsg = msgs[msgs.length - 1]
+    if (lastMsg?.error) removeMessage(lastMsg.id)
+    addMessage({
+      id: 'err-' + Date.now(),
+      role: 'assistant',
+      content,
+      timestamp: Date.now(),
+      error: true,
+      userInput,
+    })
+  }
+
   const getCardClass = (id: string) => {
-    const base = "p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02]" 
+    const base = "p-3 md:p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02]"
     if (selected === id) return base + "border-amber-500 bg-zinc-800/80 shadow-lg shadow-amber-500/20" 
     return base + "border-zinc-700 bg-zinc-900 hover:bg-zinc-800/50" 
+  }
+
+  const isErrorLike = (text: string) => {
+    if (!text) return false
+    return /\[Server Error\]|\[Connection Error\]|ECONNREFUSED|ECONNRESET|ETIMEDOUT|^\s*\{\s*"error"/i.test(text) ||
+      /\b(error|404|500|502|503|401|403)\b/i.test(text.substring(0, 80))
   }
 
   const handleSelect = async () => {
@@ -53,53 +74,62 @@ export function SelectScreen() {
     setPhase("PLAYING");
     setLocalLoading(true)
     setLoading(true)
-    addMessage({ id: 'sys-1779763776648', role: 'system', content: '选择了开局流派: ' + trope.name, timestamp: Date.now() })
+    const userInput = '\n[STREAM_START]\n[GENRE]' + trope.id + '\n[TITLE]' + trope.name + '\n[HINT]' + trope.openingHint + '\n[STREAM_END]\n'
+    addMessage({ id: 'sys-' + Date.now(), role: 'system', content: '选择了开局流派: ' + trope.name, timestamp: Date.now() })
     try {
       const res = await fetch("/api/game/action", {
         method: "POST" ,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           llmConfig: getLLMConfig(),
-          input: '\n[STREAM_START]\n[GENRE]' + trope.id + '\n[TITLE]' + trope.name + '\n[HINT]' + trope.openingHint + '\n[STREAM_END]\n' ,
+          input: userInput,
           playerName: player?.name || '无名' ,
           playerId: player?.id || String(Date.now()),
-          mode: 'prepare' 
+          mode: 'prepare'
         })
       })
       if (!res.ok) {
         const errBody = await res.text()
-        let errMsg = '请求失败 (' + res.status + ')' 
+        let errMsg = '请求失败 (' + res.status + ')'
         try { errMsg = JSON.parse(errBody).error || errMsg } catch {}
-        addMessage({ id: 'err-1779763776648', role: 'assistant', content: errMsg, timestamp: Date.now() })
+        addErrorMessage(errMsg, userInput)
         return
       }
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       if (!reader) return
-      let buffer = '' 
+      let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         buffer += decoder.decode(value, { stream: true })
         const parts = buffer.split(String.fromCharCode(10));
-        buffer = parts.pop() || '' 
-        let evt = '' 
+        buffer = parts.pop() || ''
+        let evt = ''
         for (const line of parts) {
           if (line.startsWith('event: ')) evt = line.slice(7)
           else if (line.startsWith('data: ')) {
             const d = line.slice(6)
             if (evt === 'reply') {
               const p = JSON.parse(d)
-              if (p.reply) addMessage({ id: 'ai-1779763776648', role: 'assistant', content: p.reply, timestamp: Date.now() })
+              if (p.reply) {
+                if (isErrorLike(p.reply)) {
+                  addErrorMessage(p.reply, userInput)
+                } else {
+                  addMessage({ id: 'ai-' + Date.now(), role: 'assistant', content: p.reply, timestamp: Date.now() })
+                }
+              }
               if (p.player) setPlayer(p.player)
             } else if (evt === 'step') setCurrentEvent(JSON.parse(d).label)
-            else if (evt === 'journal') {var je=JSON.parse(d);useGameStore.getState().addJournal({id:Date.now().toString(),title:je.title,content:je.content,entry_type:je.entry_type||"general",timestamp:je.timestamp||Date.now()})}else if (evt === 'error') addMessage({ id: 'err-1779763776648', role: 'assistant', content: JSON.parse(d).message, timestamp: Date.now() })
+            else if (evt === 'codex') {var ce=JSON.parse(d);useGameStore.getState().addCodex({id:Date.now().toString(),name:ce.name,entry_type:ce.entry_type||"general",description:ce.description||"",metadata:ce.metadata||{},timestamp:ce.timestamp||Date.now()});addNotification('codex')}
+            else if (evt === 'journal') {var je=JSON.parse(d);useGameStore.getState().addJournal({id:Date.now().toString(),title:je.title,content:je.content,entry_type:je.entry_type||"general",timestamp:je.timestamp||Date.now()});addNotification('journal')}
+            else if (evt === 'error') addErrorMessage(JSON.parse(d).message, userInput)
           }
         }
       }
     } catch (err) {
       console.error('Stream error:' , err)
-      addMessage({ id: 'err-1779763776648', role: 'assistant', content: '[Connection Error] ' + (err instanceof Error ? err.message : String(err)), timestamp: Date.now() })
+      addErrorMessage('[Connection Error] ' + (err instanceof Error ? err.message : String(err)), userInput)
     } finally {
       setLocalLoading(false)
       setLoading(false)
@@ -109,23 +139,23 @@ export function SelectScreen() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-zinc-950 to-zinc-900 p-4 overflow-auto">
-      <div className="w-full max-w-5xl space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-zinc-200 font-chinese tracking-wider">天 命 抉 择</h1>
-          <p className="text-zinc-400">选择你的开局流派，不同流派将决定你修仙之路的起点与命运</p>
+      <div className="w-full max-w-5xl space-y-4 md:space-y-6 px-2 md:px-0">
+        <div className="text-center space-y-1 md:space-y-2">
+          <h1 className="text-2xl md:text-4xl font-bold text-zinc-200 font-chinese tracking-wider">天 命 抉 择</h1>
+          <p className="text-xs md:text-base text-zinc-400">选择你的开局流派，不同流派将决定你修仙之路的起点与命运</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
           {tropes.map((trope) => (
             <div key={trope.id} onClick={() => !loading && setSelected(trope.id)} className={getCardClass(trope.id)}>
-              <div className="text-2xl mb-2">{trope.icon}</div>
-              <h3 className="text-sm font-bold text-zinc-200 mb-1 font-chinese">{trope.name}</h3>
-              <p className="text-zinc-500 text-xs leading-relaxed">{trope.desc}</p>
+              <div className="text-xl md:text-2xl mb-1.5 md:mb-2">{trope.icon}</div>
+              <h3 className="text-xs md:text-sm font-bold text-zinc-200 mb-0.5 md:mb-1 font-chinese">{trope.name}</h3>
+              <p className="text-zinc-500 text-[10px] md:text-xs leading-relaxed line-clamp-3 md:line-clamp-none">{trope.desc}</p>
             </div>
           ))}
         </div>
         <div className="flex justify-center">
-          <button onClick={handleSelect} disabled={!selected || loading} className="px-8 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-            {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />天道推演中...</> : '确认选择'}
+          <button onClick={handleSelect} disabled={!selected || loading} className="px-6 md:px-8 py-2.5 md:py-3 text-base md:text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            {loading ? <><Loader2 className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2 animate-spin" />天道推演中...</> : '确认选择'}
           </button>
         </div>
       </div>

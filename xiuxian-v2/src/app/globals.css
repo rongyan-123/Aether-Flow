@@ -191,6 +191,15 @@ body {
 }
 
 
+/* 移动端安全区 */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* 修仙关键词着色 */
 .text-xiuxian-gold { color: #D4AF37; font-weight: 600; }
 .text-xiuxian-jade { color: #10B981; font-weight: 600; }

@@ -1,0 +1,252 @@
+================================================================================
+                    修仙模拟器 (xiuxian-v2) — 项目文件说明
+================================================================================
+
+【项目概述】
+  基于 Next.js 16 + LangGraph + Prisma 的 AI 文字修仙游戏。
+  前后端一体化架构，通过 SSE 流式返回 AI 生成的修仙剧情。
+  玩家选择开局流派，AI 基于 LangGraph 状态机驱动剧情、数值结算、道具生成。
+
+================================================================================
+一、根目录配置文件
+================================================================================
+
+CLAUDE.md / AGENTS.md
+  └─ Claude Code 的项目指令文件，告诉 AI 助手这是 Next.js 项目（非标准版本）
+
+package.json
+  └─ 项目依赖：Next.js 16, React 19, LangChain, Prisma, Zustand, Framer Motion 等
+
+tsconfig.json
+  └─ TypeScript 编译配置
+
+tailwind.config.ts
+  └─ Tailwind CSS 配置（新中式暗黑修仙风主题色）
+
+components.json
+  └─ Shadcn UI 组件库配置
+
+prisma.config.ts
+  └─ Prisma ORM 配置
+
+prisma/schema.prisma
+  └─ 数据库表结构定义。核心表：
+     - Player：玩家数据（stats/inventory/codex/relationships 都是 JSONB 字段）
+     - ChatMessage：对话历史
+     - VectorDocument：pgvector 向量库文档
+
+.env（需自行创建）
+  └─ 环境变量：DATABASE_URL, OPENAI_API_KEY（或兼容 API 的 baseURL）
+
+codex执行日志.txt
+  └─ 上一轮 codex AI 助手的任务执行日志（图鉴系统改造）
+
+================================================================================
+二、src/app/ — Next.js App Router 页面与 API
+================================================================================
+
+src/app/layout.tsx
+  └─ 全局根布局，加载字体、全局 CSS、metadata
+
+src/app/page.tsx
+  └─ 首页入口，根据 phase 状态切换 InitScreen / SelectScreen / 主游戏界面
+
+src/app/globals.css
+  └─ 全局样式，Tailwind 指令 + 修仙主题 CSS 变量
+
+src/app/api/game/route.ts
+  └─ GET 接口：读取玩家数据，返回 player + 对话历史
+
+src/app/api/game/action/route.ts ★核心接口★
+  └─ POST 接口：玩家发送动作/意图 → 调用 LangGraph 工作流 → SSE 流式返回
+     流程：
+       1. 鉴权：读 playerId，查 DB 获取 player
+       2. 如玩家不存在：创建新玩家（带默认属性）
+       3. 如向量库为空：注入世界观
+       4. 构建 GameState 初始状态 → graph.invoke()
+       5. SSE 流式下发 reply / codex / journal / step / done 事件
+       6. 前端实时接收剧情文本 + 状态快照
+
+================================================================================
+三、src/lib/game/ — LangGraph 游戏引擎（后端核心）
+================================================================================
+
+graph.ts ★状态定义★
+  └─ GameStateAnnotation：LangGraph 全局状态注解
+     字段：messages, playerId, playerName, stats, inventory, codex,
+           relationships, ragContext, intent, deltas, finalReply
+  └─ buildGameGraph()：构建 4 节点有向图
+     rag_retriever → plot_director → rule_engine → db_persist → END
+
+nodes.ts ★节点实现★
+  └─ ragRetrieverNode (Node A)：RAG 检索 → 从 pgvector 查世界观上下文
+  └─ plotDirectorNode (Node B)：调用 LLM 生成剧情 + 工具调用
+     - 绑定所有 gameTools，AI 可调用 Generate_NPC 等
+     - 如果 AI 只调工具没输出文本，自动做二次补全
+  └─ ruleEngineNode (Node C) ★纯代码规则引擎★
+     - 处理 AI 的所有 tool_calls，更新 stats / inventory / codex / relationships
+     - 护盾系统：伤害优先扣护盾，破盾后溢出扣HP；自动伤势分级判定
+     - 动态灵力：Consume_Item 支持 mp_cost，玩家可自主注入1%~100%灵力
+     - 支持的变更：Backpack_additems, Backpack_reduceitems, Consume_Item,
+       Modify_Stats, Modify_Techniques, Modify_Traits,
+       Modify_Mental, Update_Relationship, Change_Location,
+       Check_Breakthrough, Generate_NPC/Location/Sect/Item (创建图鉴),
+       Write_Codex, Write_Journal
+  └─ dbPersistNode (Node D)：将 state 写入 PostgreSQL（Prisma）
+
+prompts.ts ★AI 顶级提示词（system prompt）★
+  └─ WORLD_RULE_PROMPT：修仙世界规则 + 写作风格 + 核心指令
+  └─ directorPrompt：ChatPromptTemplate，拼接 system + 历史 + 用户输入
+  └─ 注意：详细的属性变化规则不在这里，而在 tools.ts 各工具的 description 中
+
+tools.ts ★AI 工具集 + 属性变化规则（per-field prompt）★
+  └─ 17 个 DynamicStructuredTool（使用 Zod 校验参数）
+  └─ ★关键设计★：每个工具的 description 字段就是该工具的 AI prompt，
+     工具内每个参数的 description 约束该参数的行为。要修改某属性的规则，
+     直接改对应工具对应字段的 description 即可。
+  └─ 属性→工具→字段 映射表：
+     心境(state_of_mind)  → Modify_Mental.state_of_mind_change  / Modify_Stats.state_of_mind_change
+     气运(fortune)        → Modify_Stats.fortune_change
+     业力(karma)          → Modify_Stats.karma_change
+     声望(reputation)     → Modify_Mental.reputation_change     / Modify_Stats.reputation_change
+     情绪(emotion)        → Modify_Mental.emotion
+     HP/MP                → Modify_Stats.hp_change / mp_change / hp_max_change / mp_max_change
+     护盾(shield)         → Modify_Stats.shield_change / shield_max_change
+     功法(techniques)     → Modify_Techniques.main / add_combat / remove_combat / movement / add_support / remove_support
+     天赋特质(traits)     → Modify_Traits.add_talents / remove_talents / add_traits / remove_traits
+     境界/种族/阵营/宗门  → Modify_Mental.realm / race / alignment / sect / spiritual_root
+     NPC关系              → Update_Relationship.npc_name / change
+     位置                 → Change_Location.location
+     突破                 → Check_Breakthrough.result / new_realm
+     动态灵力消耗         → Consume_Item.mp_cost （支持1%~100%灵活注入）
+  └─ 工具分类：
+     - 世界生成：Generate_Item, Generate_NPC, Generate_Location, Generate_Sect
+     - 背包操作：Backpack_additems, Backpack_reduceitems, Consume_Item
+     - 属性变更：Modify_Stats, Modify_Techniques, Modify_Traits, Modify_Mental
+     - 社交/移动：Update_Relationship, Change_Location
+     - 系统：Check_Breakthrough, Skip, Write_Codex, Write_Journal
+
+================================================================================
+四、src/lib/ — 其他公共库
+================================================================================
+
+db.ts
+  └─ Prisma 客户端单例（全局复用，防止开发时热重载创建多个连接）
+
+vector-store.ts
+  └─ pgvector 向量数据库操作：searchVectors, storeVector, injectWorldview
+     注意：当前仅用于 RAG 世界观检索，图鉴数据已改为直接存 DB
+
+utils.ts
+  └─ Tailwind className 合并工具（cn 函数）
+
+langgraph.ts
+  └─ LangGraph 相关辅助（如有）
+
+================================================================================
+五、src/stores/ — 前端状态管理
+================================================================================
+
+game.ts ★Zustand 全局状态★
+  └─ useGameStore：
+     - player: 当前玩家数据（IPlayer）
+     - chatHistory: 对话消息列表
+     - codex: 图鉴条目列表（人物/地点/物品/宗门）
+     - journal: 日志/事件条目
+     - phase: INIT → SELECT → PLAYING → DEAD
+     - currentView: 当前面板（chat/backpack/stats/journal/codex/settings）
+     关键 Action：setPlayer, updateStats, addCodex, addJournal, resetGame
+     持久化：localStorage（key: "xiuxian-game"）
+
+================================================================================
+六、src/types/index.ts — TypeScript 类型定义
+================================================================================
+
+  - GradeTier / GradeLevel / ItemGrade：品阶字面量
+  - IntentType：AI 意图类型（NONE/REWARD/PENALTY/COMBAT）
+  - IPlayer：玩家聚合根
+  - ICharacterStats：角色全维面板（HP/MP/护盾/神识/境界/寿元/阵营/宗门/功法等）
+  - IInventoryItem：背包物品
+  - IRelationships：人际关系 Map
+  - CodexEntry：图鉴条目（id/name/entry_type/description/metadata/timestamp）
+  - JournalEntry：日志条目
+  - IChatMessage：对话消息
+
+================================================================================
+七、src/components/ — React 前端组件
+================================================================================
+
+game-sidebar.tsx ★左侧导航栏★
+  └─ 导航项：对话 / 背包 / 属性 / 日志 / 图鉴 / 设置
+  └─ 移动端：汉堡菜单；桌面端：固定 72px 宽侧栏
+
+chat-panel.tsx ★中控主屏 — 对话区★
+  └─ 流式 SSE 渲染（打字机效果）
+  └─ 输入框：自然语言 + "/" 快捷指令
+  └─ 监听 SSE 事件：reply / codex / journal / step / error
+
+status-panel.tsx ★右侧状态面板（桌面端）★
+  └─ 精简信息：HP/MP/寿元进度条 + 神识 + 背包预览
+
+stats-panel.tsx ★详细属性面板★
+  └─ 全维数据：气血/灵力/寿元条、基础信息网格（境界/灵根/阵营/宗门等）
+  └─ 功法、装备、天赋与特质展示
+
+backpack-panel.tsx ★背包面板★
+  └─ 物品列表，按品阶着色
+
+codex-panel.tsx ★图鉴面板★
+  └─ 按类型分组（人物/地点/物品/宗门），卡片式布局
+  └─ 数据来源：store.codex ← setPlayer(player.codex) ← DB
+
+journal-panel.tsx ★日志面板★
+  └─ 故事关键事件记录列表
+
+init-screen.tsx ★初始界面★
+  └─ 输入道号（玩家名）、选择性别 → 调用 setPlayer → 进入 SELECT 阶段
+
+select-screen.tsx ★流派选择界面★
+  └─ 15 种开局流派（废柴流/退婚流/扮猪吃虎流...）
+  └─ 选择后调用 POST /api/game/action（prepare 模式）生成开场剧情
+
+settings-panel.tsx ★设置面板★
+  └─ LLM 配置：API Key / Base URL / Model Name
+
+ui/ — Shadcn UI 基础组件
+  └─ button.tsx, input.tsx, label.tsx, progress.tsx, radio-group.tsx,
+     scroll-area.tsx, sheet.tsx
+
+================================================================================
+八、数据流核心链路
+================================================================================
+
+【玩家创建 → 首次剧情】
+  1. InitScreen：用户输入道号"齐尘" → setPlayer({name:"齐尘", stats:{...}, ...})
+  2. SelectScreen：用户选择流派 → fetch POST /api/game/action
+     body: { playerName:"齐尘", playerId, mode:"prepare", ... }
+  3. route.ts：创建 DB Player（name:"齐尘", stats:默认属性）→ graph.invoke(init)
+     init 包含 playerName:"齐尘"
+  4. plotDirectorNode：LLM 看到 "Current Player: 齐尘" → 用这个名字写剧情
+  5. LLM 调 Generate_NPC/Location 等工具 → ruleEngineNode 创建 codex 条目
+  6. dbPersistNode 保存 stats/inventory/codex 到 DB
+  7. SSE 流式返回剧情文本 + player 快照（含 codex）
+
+【后续回合】
+  1. ChatPanel：用户输入 → fetch POST /api/game/action
+     body: { input:"走进山洞", playerId, mode:"play" }
+  2. route.ts：读 DB player → graph.invoke(init with player data)
+  3. 流程同上，playerName 从 DB 的 player.name 读取（始终保持一致）
+
+================================================================================
+九、关键注意事项
+================================================================================
+
+  - AI 提示词不要硬编码在 API 路由中，统一放 src/lib/game/prompts.ts
+  - 所有数值变更由 ruleEngineNode（纯代码）处理，AI 只负责传参
+  - SSE 事件类型：text-delta(流式文本) / state-update(状态快照) /
+    system-event(系统事件) / reply(完整回复) / codex(图鉴) / journal(日志)
+  - 图鉴数据直接存 Player.codex (JSONB)，不再从向量库查询
+  - 前端 Zustand store 持久化到 localStorage，避免刷新丢失
+
+================================================================================
+最后更新：2026-05-27

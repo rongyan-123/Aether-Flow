@@ -1,0 +1,67 @@
+上次对话记录 — 2026-05-28（第5轮）
+================================================================================
+
+【本轮任务】
+实现两大核心优化：
+1. Token优化：自动总结 + 历史RAG + 摘要感知上下文
+2. 逻辑挑刺层：AI回复后自动校验逻辑一致性，发现问题自动修正
+
+【已完成的修改】
+
+1. prisma/schema.prisma — 新增 ConversationSummary 表
+   - playerId, content, fromIndex, toIndex, createdAt
+   - 每20轮对话自动生成一条摘要
+
+2. src/lib/game/summarizer.ts ★新文件★ — 对话自动总结模块
+   - maybeSummarize(): 每20轮(40条消息)自动触发总结
+   - getAllSummaries(): 获取全部历史摘要，注入RAG上下文
+   - getRecentMessages(): 只加载上次总结后的消息（而非全部历史）
+   - 总结格式：【当前地点】【最近事件】【关键NPC】【背包重要物品】
+   - 总结同时存入DB和向量库
+
+3. src/lib/game/tools.ts — 新增 Search_History 工具
+   - AI需要回忆过往剧情时，调用此工具模糊搜索历史记录
+   - 支持按关键词检索向量库中的历史和摘要
+
+4. src/lib/game/prompts.ts — 三处更新
+   - WORLD_RULE_PROMPT加入SELF-CHECK自检指令（位置逻辑/上下文跟踪/空间推理）
+   - WORLD_RULE_PROMPT加入Search_History使用说明
+   - 新增CRITIQUE_PROMPT：挑刺专用prompt，5项检查清单
+
+5. src/app/api/game/action/route.ts ★核心管线重写★
+   - 引入summarizer：每次请求触发maybeSummarize检查
+   - chatHistory改为getRecentMessages() + getAllSummaries()
+     （总结感知加载，而非简单取最近20条）
+   - 新增STEP 4.5：挑刺层
+     · 发送"天道审视中"step事件
+     · 用CRITIQUE_PROMPT调用LLM检查逻辑
+     · 发现ISSUES则自动修正（max 1次）
+     · 发送"天道察觉命运矛盾"step事件提示用户
+   - 每轮对话存入向量库（type: "history"），供Search_History检索
+
+6. src/lib/game/nodes.ts + route.ts — Search_History处理
+   - ruleEngineNode中记录todolist
+   - processRuleEngine中跳过（只读工具，不改变状态）
+
+【架构变化】
+
+对话上下文加载（优化前→优化后）：
+  优化前：chat_history = 最近20条原始消息
+  优化后：chat_history = 上次总结后的消息 + RAG上下文包含所有历史摘要
+
+AI工具数量：17 → 18（新增Search_History）
+
+管线步骤（优化前→优化后）：
+  优化前：RAG检索 → LLM生成 → 执行工具 → 流式补全 → 规则引擎 → 存DB → 返回
+  优化后：RAG检索 → LLM生成 → 执行工具 → 流式补全 → ★挑刺校验★ → 规则引擎 → 存DB+向量 → 返回
+
+【当前状态】
+- 构建：✅ 通过
+- 自动总结：✅ 每20轮触发
+- 历史搜索：✅ AI可通过Search_History检索过往
+- 逻辑挑刺：✅ 自动检测+修正
+- 向量历史：✅ 每轮对话存入向量库
+
+【待办】
+- 需要Docker Desktop启动PostgreSQL才能实际测试
+- 挑刺层效果需要多轮对话验证

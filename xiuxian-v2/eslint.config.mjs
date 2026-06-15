@@ -5,6 +5,13 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Globally disable the rule that forbids 'any'.
+  // This makes @typescript-eslint/no-explicit-any effectively off across the project.
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

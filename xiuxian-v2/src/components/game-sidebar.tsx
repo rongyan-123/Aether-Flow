@@ -16,13 +16,24 @@ const navItems = [
 ]
 
 export function GameSidebar() {
-  const { currentView, setCurrentView, phase, resetGame, player } = useGameStore()
+  const { currentView, setCurrentView, phase, resetGame, player, notifications } = useGameStore()
   const [open, setOpen] = useState(false)
   const hasPlayer = phase === 'PLAYING' || phase === 'DEAD'
   const name = (player as any)?.name || '无名'
 
-  const handleRestart = () => {
-    if (window.confirm('确定要结束当前修仙之旅，重新开始吗？')) resetGame()
+  const handleRestart = async () => {
+    if (!window.confirm('确定要结束当前修仙之旅，重新开始吗？')) return;
+    // Clean server-side data (DB + vectors)
+    if ((player as any)?.id) {
+      try {
+        await fetch('/api/game', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: (player as any).id }),
+        });
+      } catch (e) { console.error('Cleanup failed:', e); }
+    }
+    resetGame();
   }
 
   return (
@@ -55,9 +66,14 @@ export function GameSidebar() {
             {navItems.map((item) => {
               const enabled = !item.requiresPlayer || hasPlayer
               return (
-                <button key={item.id} onClick={() => enabled && setCurrentView(item.id as any)} disabled={!enabled} className={cn('flex items-center gap-4 px-4 py-3 rounded-lg transition-colors w-full text-left', !enabled && 'opacity-30 cursor-not-allowed', enabled && currentView === item.id && 'bg-zinc-800/50 text-zinc-200', enabled && currentView !== item.id && 'text-zinc-400 hover:bg-zinc-800/30')}>
+                <button key={item.id} onClick={() => enabled && setCurrentView(item.id as any)} disabled={!enabled} className={cn('flex items-center gap-4 px-4 py-3 rounded-lg transition-colors w-full text-left relative', !enabled && 'opacity-30 cursor-not-allowed', enabled && currentView === item.id && 'bg-zinc-800/50 text-zinc-200', enabled && currentView !== item.id && 'text-zinc-400 hover:bg-zinc-800/30')}>
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
+                  {(notifications[item.id] || 0) > 0 && currentView !== item.id && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+                      {notifications[item.id] > 99 ? '99+' : notifications[item.id]}
+                    </span>
+                  )}
                 </button>
               )
             })}

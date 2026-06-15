@@ -47,12 +47,12 @@ export function InitScreen() {
       animate={{ opacity: 1 }}
       className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-zinc-950 to-zinc-900 p-4"
     >
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-zinc-200 font-chinese tracking-wider">仙 途 启 程</h1>
-          <p className="text-zinc-400">道友，请留下你的名号，开启这段修仙之旅</p>
+      <div className="w-full max-w-md space-y-6 md:space-y-8 px-2 md:px-0">
+        <div className="text-center space-y-1.5 md:space-y-2">
+          <h1 className="text-2xl md:text-4xl font-bold text-zinc-200 font-chinese tracking-wider">仙 途 启 程</h1>
+          <p className="text-sm md:text-base text-zinc-400">道友，请留下你的名号，开启这段修仙之旅</p>
         </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 shadow-2xl backdrop-blur-sm space-y-6">
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 md:p-6 shadow-2xl backdrop-blur-sm space-y-5 md:space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name" className="text-zinc-300">道号</Label>
             <Input

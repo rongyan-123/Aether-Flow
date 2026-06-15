@@ -12,14 +12,18 @@ model Player {
   name      String   
   gender    String   
   
-  stats          Json    
-  inventory      Json    @default("[]") 
-  relationships  Json    @default("{}") 
+  stats          Json
+  inventory      Json    @default("[]")
+  codex          Json    @default("[]")
+  relationships  Json    @default("{}")
+  situations     Json    @default("[]")
+  foreshadowings Json    @default("[]") 
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  chatHistory ChatMessage[]
+  chatHistory          ChatMessage[]
+  conversationSummaries ConversationSummary[]
 }
 
 model ChatMessage {
@@ -34,8 +38,23 @@ model ChatMessage {
   createdAt DateTime @default(now())
 }
 
-model VectorDocument {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  metadata  Json
+model ConversationSummary {
+  id          String   @id @default(cuid())
+  playerId    String
+  content     String   @db.Text
+  fromIndex   Int      @default(0)
+  toIndex     Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  player      Player   @relation(fields: [playerId], references: [id])
+}
+
+model ConversationVector {
+  id              Int      @id @default(autoincrement())
+  conversationId  String   @map("conversation_id")
+  content         String   @db.Text
+  metadata        Json     @default("{}")
+
+  @@index([conversationId])
+  @@map("conversation_vectors")
 }
