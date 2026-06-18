@@ -4,7 +4,10 @@ WORKDIR /app
 # --- deps ---
 FROM base AS deps
 COPY package.json ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com && npm install --ignore-scripts
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+RUN npx prisma generate
 
 # --- builder ---
 FROM base AS builder

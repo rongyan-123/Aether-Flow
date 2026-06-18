@@ -11,7 +11,7 @@ import { gameTools, setConversationId, findToolByName } from "./tools";
 import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage } from "@langchain/core/messages";
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+// InputJsonValue removed in Prisma 7 — use PrismaClient native JSON handling
 import type { Situation, Foreshadowing } from "@/types";
 
 let _llmConfig = {
@@ -713,7 +713,7 @@ export async function dbPersistNode(state: typeof GameStateAnnotation.State) {
     await prisma.player.update({
       where: { id: playerId },
       data: {
-        stats: stats as unknown as Prisma.InputJsonValue,
+        stats: stats as unknown as any,
         inventory: inventory as any,
         relationships: (relationships || {}) as any,
         status: hpCurrent <= 0 ? "DEAD" : "ALIVE",

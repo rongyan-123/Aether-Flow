@@ -5,7 +5,7 @@
 // 3. 执行检索（RAG）→ 调用 LLM（带 tools）→ 执行 tools（如改背包/写图鉴）→ 回写并流式返回文本。
 // 你不用一次看懂每一行，先关注这些高层步骤，后面遇到具体功能再逐步深入。
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+// InputJsonValue removed in Prisma 7 — use PrismaClient native JSON handling
 import type { ICharacterStats, IInventoryItem, Situation, Foreshadowing } from "@/types";
 import { setLLMConfig } from "@/lib/game/nodes";
 import { injectWorldview, listVectors, storeVector } from "@/lib/vector-store";
@@ -71,10 +71,10 @@ export async function POST(req: Request) {
           state_of_mind: 50,
           fortune: 10,
           karma: 0,
-        } as Prisma.InputJsonValue,
-        inventory: [] as Prisma.InputJsonValue,
-        relationships: {} as Prisma.InputJsonValue,
-        codex: [] as Prisma.InputJsonValue,
+        } as any,
+        inventory: [] as any,
+        relationships: {} as any,
+        codex: [] as any,
       },
     });
     await injectWorldview(playerId);
