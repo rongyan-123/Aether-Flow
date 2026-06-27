@@ -25,3 +25,12 @@ pnpm-debug.log*
 
 # 忽略环境变量文件.
 .env
+
+# Dev logs
+dev-server.log
+
+# Test results
+test-results/
+
+# Runtime state files
+email_check_state.json
